@@ -1,0 +1,48 @@
+{
+  "name": "slide-library-powerpoint-mvp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local pilot MVP of a corporate slide library for Microsoft PowerPoint.",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "postinstall": "npm run build:shared",
+    "build:shared": "npm run build -w @slide-library/shared",
+    "dev": "npm run build:shared && npm run certs:ensure && concurrently --kill-others --names server,addin --prefix-colors blue,magenta \"npm run dev -w @slide-library/server\" \"npm run dev -w @slide-library/addin\"",
+    "dev:browser": "npm run build:shared && concurrently --kill-others --names server,addin --prefix-colors blue,magenta \"npm run dev -w @slide-library/server\" \"npm run dev:browser -w @slide-library/addin\"",
+    "build": "npm run build -w @slide-library/shared && npm run build -w @slide-library/server && npm run build -w @slide-library/addin",
+    "lint": "eslint . --max-warnings=0",
+    "typecheck": "npm run build:shared && npm run typecheck -w @slide-library/server && npm run typecheck -w @slide-library/addin && npm run typecheck:tools",
+    "typecheck:tools": "tsc -p tools/tsconfig.json",
+    "test": "npm run build:shared && npm run test -w @slide-library/server && npm run test -w @slide-library/addin",
+    "check": "npm run validate-library && npm run validate-manifest && npm run lint && npm run typecheck && npm run test && npm run build",
+    "validate-library": "npm run build:shared --silent && tsx tools/validate-library.ts",
+    "reindex-library": "npm run build:shared --silent && tsx tools/reindex-library.ts",
+    "import-pptx": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/split-presentation.ps1",
+    "validate-manifest": "office-addin-manifest validate apps/addin/manifest.xml",
+    "certs:ensure": "office-addin-dev-certs install",
+    "sideload": "npx --yes office-addin-debugging start apps/addin/manifest.xml desktop --app powerpoint",
+    "sideload:stop": "npx --yes office-addin-debugging stop apps/addin/manifest.xml"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@eslint/js": "latest",
+    "concurrently": "latest",
+    "cross-env": "latest",
+    "eslint": "latest",
+    "eslint-plugin-react-hooks": "latest",
+    "eslint-plugin-react-refresh": "latest",
+    "globals": "latest",
+    "office-addin-dev-certs": "latest",
+    "office-addin-manifest": "latest",
+    "tsx": "latest",
+    "typescript": "latest",
+    "typescript-eslint": "latest",
+    "vitest": "latest"
+  }
+}

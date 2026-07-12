@@ -1,0 +1,6 @@
+*.pptx binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+* text=auto eol=lf
