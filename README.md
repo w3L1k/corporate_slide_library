@@ -1,149 +1,279 @@
-# Slide Library for PowerPoint
+# Корпоративная библиотека слайдов для PowerPoint
 
-## What it is
+## Что это такое
 
-Slide Library is a local pilot MVP of a corporate slide catalog delivered as a Microsoft PowerPoint task-pane add-in. A user can browse governed content, search and filter it, inspect metadata and a large preview, and insert the registered one-slide `.pptx` into the open presentation.
+Slide Library — локальный MVP корпоративной библиотеки слайдов, работающий как task pane-надстройка внутри Microsoft PowerPoint.
 
-The repository includes a React/TypeScript add-in, an Express/TypeScript API, shared validated domain types, 12 demo items, content-validation tools, and a browser-only development fallback.
+Пользователь может:
 
-## Problem
+- открыть каталог корпоративных слайдов;
+- искать и фильтровать материалы;
+- просматривать preview и метаданные;
+- вставлять зарегистрированный однослайдовый `.pptx` в текущую презентацию.
 
-Teams commonly reuse slides by searching old decks and copying content manually. That makes it difficult to know which version, data, wording, or visual treatment is current. This MVP makes catalog metadata, approval status, previews, and editable PowerPoint source files available from one place inside PowerPoint.
+Это именно MVP для локальной демонстрации и пилота внутри одного подразделения. Проект уже содержит рабочий пользовательский сценарий, но до полноценного корпоративного продукта ещё предстоит реализовать много функций: SSO, права доступа, SharePoint/OneDrive, админ-панель, workflow согласования, аналитику и production-развёртывание.
 
-## MVP capabilities
+## Какую проблему решает проект
 
-- Catalog cards with lazy-loaded previews, category, status, and update date.
-- Debounced text search across title, description, category, tags, and optional `searchText`.
-- Case-insensitive category filtering and `approved`, `draft`, or `deprecated` status filtering.
-- An accessible details dialog with version, ownership fields, tags, and a larger preview.
-- Loading, API-error/retry, empty-catalog, no-results, missing-preview, inserting, success, and failure states.
-- Real PPTX download and insertion through Office.js, using `insertSlidesFromBase64` with source formatting retained.
-- Browser preview mode that exercises the catalog without pretending that PowerPoint insertion is available.
-- A configurable filesystem library with schema validation, duplicate-ID checks, registered-file checks, and path-containment enforcement.
-- Automatic catalog reload after a normal `catalog.json` modification, an explicit pilot refresh endpoint, and content-owner CLI tools.
-- Structured server logs without logging PPTX bodies or Base64 data.
+Команды часто переиспользуют слайды, находя старые презентации и копируя материалы вручную. Из-за этого сложно понять, какая версия слайда актуальна, утверждены ли данные и соответствует ли оформление текущему фирменному стилю.
 
-## Architecture
+MVP предоставляет единый локальный каталог с метаданными, статусом утверждения, preview и редактируемым исходным PowerPoint-слайдом непосредственно внутри PowerPoint.
+
+## Возможности текущего MVP
+
+- карточки слайдов с ленивой загрузкой preview;
+- поиск по названию, описанию, категории, тегам и `searchText`;
+- фильтрация по категории и статусу `approved`, `draft`, `deprecated`;
+- отображение версии, даты обновления, владельца, автора, отдела и языка;
+- увеличенный preview и диалог подробной информации;
+- состояния загрузки, ошибки API, пустого каталога, отсутствующих preview и результатов поиска;
+- реальная загрузка PPTX и вставка через Office.js;
+- сохранение исходного форматирования слайда;
+- browser mode для разработки без PowerPoint;
+- файловое хранилище с JSON-каталогом;
+- проверка схемы, duplicate ID, зарегистрированных файлов и безопасных путей;
+- автоматическое обновление каталога после изменения `catalog.json`;
+- CLI для проверки и обновления библиотеки;
+- структурированные серверные логи без записи содержимого PPTX и Base64.
+
+## Архитектура
 
 ```mermaid
 flowchart LR
     PP["Microsoft PowerPoint"] <-->|"Office.js"| TP["React task pane"]
-    TP -->|"same-origin /api"| API["Express catalog API"]
+    TP -->|"same-origin /api"| API["Express API"]
     API --> SS["SlideStorage interface"]
     SS --> FS["Filesystem adapter"]
     FS --> CAT["catalog.json"]
-    FS --> ASSETS["registered previews and one-slide PPTX files"]
+    FS --> ASSETS["preview и однослайдовые PPTX"]
 ```
 
-The add-in never sends a filesystem path. Binary routes accept a validated catalog ID, and the server resolves only the paths registered in the validated catalog. Office-specific behavior is isolated behind `PowerPointService`, so the UI and API remain usable in an ordinary browser.
+Надстройка никогда не передаёт серверу произвольный путь к файлу. Binary endpoints принимают только ID элемента каталога, а сервер отдаёт только файлы, зарегистрированные в валидированном каталоге.
 
-See [Architecture](docs/ARCHITECTURE.md) and the existing [technical plan](docs/TECHNICAL_PLAN.md) for the detailed boundaries and request flows.
+PowerPoint-интеграция изолирована за интерфейсом `PowerPointService`, поэтому UI и API работают в обычном браузере без Office.js.
 
-## Tech stack
+Подробные схемы находятся в [ARCHITECTURE.md](docs/ARCHITECTURE.md) и [TECHNICAL_PLAN.md](docs/TECHNICAL_PLAN.md).
 
-- npm workspaces; Node.js and TypeScript.
-- React and Vite for the task pane.
-- Office.js and the `PowerPointApi 1.2` requirement set.
-- Express and Zod for the API and runtime contracts.
-- Vitest, React Testing Library, ESLint, and TypeScript quality gates.
-- JSON metadata plus local PPTX and PNG/JPEG/WebP files for pilot storage.
+## Технологический стек
 
-## Prerequisites
+- npm workspaces, Node.js и TypeScript;
+- React и Vite для task pane;
+- Office.js и `PowerPointApi 1.2`;
+- Express и Zod для API и runtime-валидации;
+- Vitest, React Testing Library, ESLint и TypeScript checks;
+- JSON-метаданные, PPTX-файлы и PNG/JPEG/WebP preview.
 
-- Node.js 20 or newer and npm.
-- For browser development: a current desktop browser.
-- For real insertion: a PowerPoint host that supports `PowerPointApi 1.2` and permits developer sideloading.
-- For the optional bulk importer: Windows desktop PowerPoint with COM automation available.
+## Требования
 
-Microsoft documents `insertSlidesFromBase64` as part of [`PowerPoint.Presentation`](https://learn.microsoft.com/en-us/javascript/api/powerpoint/powerpoint.presentation), and lists its host/build availability in the [PowerPoint requirement-set matrix](https://learn.microsoft.com/en-us/javascript/api/requirement-sets/powerpoint/powerpoint-api-requirement-sets).
+Для browser mode:
 
-## Quick start
+- Node.js 20 или новее;
+- npm;
+- современный desktop-браузер.
 
-From the repository root:
+Для реальной вставки слайдов:
+
+- установленный Microsoft PowerPoint;
+- PowerPoint с поддержкой `PowerPointApi 1.2`;
+- возможность developer sideloading;
+- доступ к локальному HTTPS-сертификату для `https://localhost:3000`.
+
+Для необязательного импортера презентаций:
+
+- Windows;
+- установленный desktop PowerPoint;
+- доступная COM automation.
+
+Официальная документация: [`insertSlidesFromBase64`](https://learn.microsoft.com/en-us/javascript/api/powerpoint/powerpoint.presentation) и [матрица PowerPoint requirement sets](https://learn.microsoft.com/en-us/javascript/api/requirement-sets/powerpoint/powerpoint-api-requirement-sets).
+
+## Запуск проекта
+
+### 1. Клонирование и установка
+
+Открой PowerShell и перейди в корень проекта:
+
+```powershell
+git clone https://github.com/w3L1k/corporate_slide_library.git
+cd corporate_slide_library
+```
+
+Установи зависимости:
 
 ```powershell
 npm install
+```
+
+Во время `npm install` автоматически собирается пакет общих типов `@slide-library/shared`.
+
+Проверь, что установка завершилась без ошибок:
+
+```powershell
+npm run validate-library
+npm run validate-manifest
+```
+
+### 2. Browser mode — быстрый запуск без PowerPoint
+
+Для демонстрации каталога, поиска, фильтров и preview запусти:
+
+```powershell
 npm run dev:browser
 ```
 
-Open <http://localhost:3000>. With `SLIDE_LIBRARY_PATH` unset or empty, the API uses the bundled `data/` demo library. Browser mode shows an explicit **Catalog preview mode** notice; pressing **Insert** explains that a PowerPoint host is required and does not fake an insertion.
+Команда запускает два процесса:
 
-Stop both development processes with `Ctrl+C` in the terminal.
+- API: `http://127.0.0.1:3001`;
+- Vite UI: `http://localhost:3000`.
 
-### Smoke test
+Открой в браузере:
 
-```powershell
-# API catalogue (12 items)
-curl http://localhost:3001/api/slides
-
-# Text search
-curl "http://localhost:3001/api/slides?q=revenue"
-
-# Category filter
-curl "http://localhost:3001/api/slides?category=Finance"
-
-# Preview image
-curl -I http://localhost:3001/api/slides/company-overview/preview
-
-# Single item
-curl http://localhost:3001/api/slides/company-overview
-
-# Full gate
-npm run check
+```text
+http://localhost:3000
 ```
 
-## Browser development mode
+В browser mode появится уведомление **Catalog preview mode**. Это нормально: каталог работает, но вставка в презентацию намеренно недоступна, потому что браузер не является PowerPoint host.
 
-`npm run dev:browser` builds the shared package, then starts:
+Остановить оба процесса можно через `Ctrl+C`.
 
-- the API at `http://127.0.0.1:3001` by default;
-- Vite at `http://localhost:3000`;
-- a Vite `/api` proxy to `http://localhost:3001`.
+### 3. Запуск внутри PowerPoint
 
-This mode needs no Office host and no development certificate. It is the recommended fallback for UI, search, filter, preview, empty/error-state, and API demonstrations. It cannot verify Office.js insertion.
+Для реальной вставки используй HTTPS-режим:
 
-## Running inside PowerPoint
+```powershell
+npm run dev
+```
 
-The add-in-only XML manifest is at `apps/addin/manifest.xml`. It points to `https://localhost:3000`, requests `ReadWriteDocument`, and declares `PowerPointApi` version `1.2`.
+Эта команда:
 
-1. Install dependencies and validate the manifest.
+1. собирает shared package;
+2. устанавливает или проверяет локальный development certificate;
+3. запускает API на `http://127.0.0.1:3001`;
+4. запускает Vite task pane на `https://localhost:3000`.
 
-   ```powershell
-   npm install
-   npm run validate-manifest
-   ```
+В терминале должны появиться сообщения примерно такого вида:
 
-2. Start the HTTPS task pane and local API. On first use, allow the development-certificate tool to install/trust its localhost certificate.
+```text
+Catalog loaded
+Slide library server is listening
+Local: https://localhost:3000/
+```
 
-   ```powershell
-   npm run dev
-   ```
+Не закрывай этот терминал во время работы надстройки.
 
-3. In a second terminal, start the desktop sideload session.
+### 4. Sideload надстройки
 
-   ```powershell
-   npm run sideload
-   ```
+Открой второе окно PowerShell в корне проекта и выполни:
 
-4. In PowerPoint, open or create a presentation. If the pane does not open automatically, use **Home → Open Slide Library** (the exact ribbon overflow location can vary by PowerPoint build).
-5. Search or filter, open an item, and press **Insert**. The service downloads the registered PPTX only at that point, converts it to Base64, and calls Office.js with `KeepSourceFormatting`.
-6. End the developer sideload session when finished.
+```powershell
+npm run sideload
+```
 
-   ```powershell
-   npm run sideload:stop
-   ```
+После этого:
 
-Keep `npm run dev` running throughout the session. The `sideload` script uses `office-addin-debugging`; its first invocation may require network access to obtain that tool.
+1. открой PowerPoint;
+2. создай новую презентацию или открой существующую;
+3. перейди на вкладку **Главная**;
+4. нажми **Open Slide Library** в группе **Slide Library**;
+5. справа откроется task pane библиотеки.
 
-If automated desktop sideload is unavailable, follow Microsoft's [Windows network-share sideload procedure](https://learn.microsoft.com/en-us/office/dev/add-ins/testing/create-a-network-shared-folder-catalog-for-task-pane-and-content-add-ins): place the XML manifest in a shared-folder catalog, trust that catalog in PowerPoint, restart PowerPoint, then add **Slide Library** from **Home → Add-ins → Advanced → Shared Folder**. Network-share sideload is for Windows testing, not production deployment. Microsoft also documents [manual sideloading in Office on the web](https://learn.microsoft.com/en-us/office/dev/add-ins/testing/sideload-office-add-ins-for-testing).
+Если команда не появилась сразу, закрой и снова открой PowerPoint. Расположение кнопки может отличаться в разных версиях Office.
 
-## Configuring slide storage
+### 5. Проверка вставки
 
-Copy the example only when you need local overrides:
+В task pane:
+
+1. введи в поиск `Revenue`;
+2. открой карточку **Revenue Overview** или нажми **Insert**;
+3. дождись окончания операции;
+4. проверь, что в презентации появился один редактируемый слайд;
+5. проверь, что сохранилось исходное форматирование.
+
+Во время вставки надстройка:
+
+1. скачивает PPTX только после нажатия Insert;
+2. преобразует файл в Base64;
+3. вызывает `PowerPoint.run`;
+4. вызывает `insertSlidesFromBase64` с `KeepSourceFormatting`;
+5. выполняет `context.sync()`.
+
+После завершения работы останови sideload:
+
+```powershell
+npm run sideload:stop
+```
+
+Если надстройка показывает **Catalog preview mode** внутри PowerPoint, закрой task pane, перезапусти `npm run dev` и снова открой надстройку через **Open Slide Library**.
+
+### 6. Если порт уже занят
+
+Vite использует порт `3000`, API — порт `3001`. Проверить занятый порт:
+
+```powershell
+Get-NetTCPConnection -LocalPort 3000 -State Listen
+Get-NetTCPConnection -LocalPort 3001 -State Listen
+```
+
+Узнать процесс по его ID:
+
+```powershell
+Get-Process -Id <PID>
+```
+
+Если это старый процесс проекта, его можно остановить:
+
+```powershell
+Stop-Process -Id <PID> -Force
+```
+
+После этого снова запусти:
+
+```powershell
+npm run dev
+```
+
+### 7. Если сертификат localhost не доверен
+
+Выполни:
+
+```powershell
+npm run certs:ensure
+```
+
+Затем перезапусти `npm run dev`. Если PowerPoint показывает предупреждение о сертификате, доверься локальному development certificate в Windows и повторно открой надстройку.
+
+## Быстрая проверка API
+
+```powershell
+# Health check
+curl http://127.0.0.1:3001/api/health
+
+# Каталог из 12 demo-слайдов
+curl http://127.0.0.1:3001/api/slides
+
+# Поиск
+curl "http://127.0.0.1:3001/api/slides?q=revenue"
+
+# Фильтр по категории
+curl "http://127.0.0.1:3001/api/slides?category=Finance"
+
+# Preview
+curl -I http://127.0.0.1:3001/api/slides/company-overview/preview
+
+# Один элемент
+curl http://127.0.0.1:3001/api/slides/company-overview
+```
+
+## Настройка хранилища слайдов
+
+По умолчанию используется встроенная папка `data/`.
+
+Для локальной настройки создай `.env` из примера:
 
 ```powershell
 Copy-Item .env.example .env
 ```
+
+Пример:
 
 ```dotenv
 HOST=127.0.0.1
@@ -154,14 +284,7 @@ ENABLE_ADMIN_REINDEX=false
 VITE_API_BASE_URL=
 ```
 
-- `HOST` defaults to `127.0.0.1`; set another interface only for an intentionally network-accessible pilot.
-- `SLIDE_LIBRARY_PATH` may be absolute or relative to the process working directory. Empty/unset selects `data/`.
-- `CORS_ORIGINS` is a comma-separated allowlist for direct browser calls. CORS is not authentication.
-- `ENABLE_ADMIN_REINDEX=true` exposes unauthenticated `POST /api/admin/reindex`; use it only in a controlled local pilot.
-- Empty `VITE_API_BASE_URL` uses the Vite `/api` proxy. A direct API URL must also satisfy CORS and, inside the HTTPS task pane, must not introduce mixed content.
-- Advanced development: `VITE_API_PROXY_TARGET` changes the Vite proxy target from its default `http://localhost:3001`.
-
-The library directory must contain:
+Структура библиотеки:
 
 ```text
 library-root/
@@ -172,42 +295,47 @@ library-root/
     one-item.png
 ```
 
-Each catalog item represents exactly one slide, and its source PPTX must contain exactly one slide. The current validator enforces metadata, registered-file existence, file type, and containment, but it does not open the PPTX to prove that invariant.
+Один элемент каталога должен соответствовать одному однослайдовому PPTX. Текущий валидатор проверяет метаданные, расширения, наличие файлов и безопасное расположение, но не открывает PPTX для автоматического подсчёта слайдов.
 
-## Adding a new slide
+## Добавление нового слайда
 
-Manual, cross-platform workflow:
-
-1. Save the approved slide as a one-slide `.pptx` under `<library>/slides/`.
-2. Export a matching PNG, JPEG, or WebP preview under `<library>/previews/`.
-3. Add one metadata object to `<library>/catalog.json`; use a unique kebab-case ID and relative forward-slash paths.
-4. Validate before publishing:
+1. Сохрани утверждённый слайд как однослайдовый `.pptx` в `<library>/slides/`.
+2. Экспортируй соответствующий preview в PNG, JPEG или WebP.
+3. Добавь объект в `<library>/catalog.json` с уникальным kebab-case ID.
+4. Проверь библиотеку:
 
    ```powershell
    npm run validate-library -- --path "C:\CorporateSlideLibrary"
    ```
 
-5. Refresh the task pane. The running server normally notices a changed catalog signature on the next request.
+5. Обнови task pane. Сервер обнаружит изменение каталога при следующем API-запросе.
 
-Optional Windows importer for an existing multi-slide deck:
+Для разбиения существующей многостраничной презентации на отдельные элементы можно использовать Windows importer:
 
 ```powershell
 npm run import-pptx -- -SourcePptx "C:\Input\source.pptx" -LibraryRoot "C:\CorporateSlideLibrary"
 ```
 
-The importer uses installed PowerPoint through COM, creates one-slide PPTX files plus 1280×720 PNG previews, and writes draft metadata to `catalog.imported.json`. Review that generated metadata and merge selected items into `catalog.json`; the tool intentionally does not publish them automatically. Add `-Category`, `-Owner`, or `-Overwrite` when needed.
+Импортер создаёт однослайдовые PPTX, preview и черновые метаданные в `catalog.imported.json`. Он не публикует новые элементы автоматически — перед публикацией их нужно проверить.
 
-For the exact schema, safe publication order, refresh behavior, rollback notes, and the honest meaning of `reindex-library`, see [Content workflow](docs/CONTENT_WORKFLOW.md).
+## Проверки качества
 
-## Tests
-
-Run the complete repository gate before calling the MVP ready:
+Полная проверка проекта:
 
 ```powershell
 npm run check
 ```
 
-It runs library validation, Microsoft manifest validation, lint, server/add-in/tools type checking, automated tests, and production builds. Individual commands are also available:
+Она запускает:
+
+- валидацию каталога;
+- валидацию manifest;
+- lint;
+- typecheck server, add-in и tools;
+- автоматические тесты;
+- production build.
+
+Отдельные команды:
 
 ```powershell
 npm run validate-library
@@ -218,18 +346,84 @@ npm run test
 npm run build
 ```
 
-Microsoft's reference for the manifest validator is [Validate an Office Add-in's manifest](https://learn.microsoft.com/en-us/office/dev/add-ins/testing/troubleshoot-manifest).
+Автоматические тесты не заменяют ручную проверку в PowerPoint. Ручной checklist находится в [docs/FINAL_CHECKLIST.md](docs/FINAL_CHECKLIST.md).
 
-Automated tests do not replace a live PowerPoint smoke test. The tracked manual checks are in [Final checklist](docs/FINAL_CHECKLIST.md).
+## Текущий статус MVP
 
-Latest verified repository gate: `npm run check` passes library and manifest validation, lint (0 errors), type checking, 71 tests (50 server + 21 add-in), and all builds; `npm audit` reports 0 known vulnerabilities. A `postinstall` hook automatically builds `@slide-library/shared` so new clones need only `npm install`. Browser and live PowerPoint/sideload checks remain separately tracked because they require manual/external-host evidence.
+Готово и работает:
 
-## Known limitations
+- локальный API и файловый каталог;
+- поиск, фильтры и preview;
+- task pane надстройка;
+- browser mode;
+- manifest и sideload-конфигурация;
+- Office.js-сервис вставки;
+- обработка ошибок и состояния UI;
+- автоматические проверки и demo-данные.
 
-This is a local/department pilot, not a production deployment. It has no SSO, RBAC, admin UI, approval workflow, usage analytics, or SharePoint connector; previews and catalog publication remain content-owner responsibilities. Browser mode cannot insert a slide, and live insertion requires a host that supports `PowerPointApi 1.2`. See [MVP limitations](docs/MVP_LIMITATIONS.md) for the distinction between designed scope limits, deployment risks, and confirmed bugs.
+Ограничения текущего MVP:
 
-## Production roadmap
+- нет enterprise SSO;
+- нет RBAC и разграничения доступа;
+- нет SharePoint/OneDrive connector;
+- нет admin UI и workflow согласования;
+- нет истории версий и аналитики использования;
+- публикация контента выполняется вручную через файлы;
+- локальный development certificate не подходит для production;
+- полноценная матрица проверки разных версий PowerPoint ещё не сформирована.
 
-The extension path keeps the public API and UI stable while replacing `FileSystemSlideStorage` with an authenticated SharePoint-backed adapter. Department governance, Entra ID, telemetry, deployment, and then organization-scale workflows are staged separately in the [Pilot roadmap](docs/PILOT_ROADMAP.md).
+Подробнее об ограничениях — в [MVP_LIMITATIONS.md](docs/MVP_LIMITATIONS.md).
 
-For a short presentation of the MVP, use the [2–4 minute demo guide](docs/DEMO_GUIDE.md).
+## Что будем делать дальше
+
+### Этап 1 — текущий MVP
+
+- локальный каталог;
+- поиск и фильтры;
+- preview;
+- вставка слайда в PowerPoint;
+- базовая валидация и документация.
+
+### Этап 2 — пилот подразделения
+
+- SharePoint или OneDrive вместо локальной файловой системы;
+- корпоративная авторизация и SSO;
+- владельцы контента и процесс согласования;
+- история обновлений;
+- аналитика использования слайдов;
+- управляемое HTTPS-развёртывание.
+
+### Этап 3 — масштабирование организации
+
+- RBAC и несколько подразделений;
+- централизованная публикация и version history;
+- рекомендации и умный поиск;
+- deployment через корпоративный Office admin center;
+- мониторинг, аудит и политики безопасности.
+
+Подробный план находится в [PILOT_ROADMAP.md](docs/PILOT_ROADMAP.md).
+
+## Документация
+
+- [Архитектура](docs/ARCHITECTURE.md)
+- [Технический план](docs/TECHNICAL_PLAN.md)
+- [Workflow работы с контентом](docs/CONTENT_WORKFLOW.md)
+- [Ограничения MVP](docs/MVP_LIMITATIONS.md)
+- [Roadmap пилота](docs/PILOT_ROADMAP.md)
+- [Сценарий демо](docs/DEMO_GUIDE.md)
+- [Финальный checklist](docs/FINAL_CHECKLIST.md)
+
+## Важное замечание
+
+Этот репозиторий — демонстрационный локальный MVP, а не готовая production-система для всей организации. Его задача — доказать основной сценарий:
+
+```text
+запустить локально
+→ открыть PowerPoint
+→ открыть Slide Library
+→ найти слайд
+→ посмотреть preview
+→ вставить слайд в презентацию
+```
+
+Следующие функции будут добавляться поэтапно после подтверждения базового сценария на пилоте.
