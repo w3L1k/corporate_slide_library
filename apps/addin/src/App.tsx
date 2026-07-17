@@ -19,6 +19,8 @@ import "./styles.css";
 
 type StatusFilter = SlideStatus | "";
 type LibrarySection = "favorites" | "presentations";
+type ViewMode = "grid" | "list";
+type SortOrder = "updated-desc" | "title-asc";
 
 const DEFAULT_STATUS: StatusFilter = "approved";
 const DEFAULT_DEBOUNCE_MS = 300;
@@ -56,6 +58,8 @@ export function App({
 }: AppProps) {
   const [query, setQuery] = useState("");
   const [activeSection, setActiveSection] = useState<LibrarySection>("presentations");
+  const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("updated-desc");
   const debouncedQuery = useDebouncedValue(query.trim(), searchDebounceMs);
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState<StatusFilter>(DEFAULT_STATUS);
@@ -160,6 +164,21 @@ export function App({
     }
     return "All corporate content";
   }, [status]);
+
+  const visibleItems = useMemo(() => {
+    const items = [...(catalog.response?.items ?? [])];
+
+    if (sortOrder === "title-asc") {
+      return items.sort((left, right) =>
+        left.title.localeCompare(right.title, undefined, { sensitivity: "base" })
+      );
+    }
+
+    return items.sort(
+      (left, right) =>
+        new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime()
+    );
+  }, [catalog.response?.items, sortOrder]);
 
   return (
     <div className="app-shell">
@@ -360,9 +379,57 @@ export function App({
                 "—"
               )}
             </p>
-            <button className="reset-button" type="button" onClick={resetFilters} disabled={!hasActiveFilters}>
-              Reset filters
-            </button>
+            <div className="results-toolbar__actions">
+              <label className="sort-control">
+                <span className="sr-only">Sort slides</span>
+                <select
+                  value={sortOrder}
+                  onChange={(event) => setSortOrder(event.target.value as SortOrder)}
+                  aria-label="Sort slides"
+                >
+                  <option value="updated-desc">Сначала новые</option>
+                  <option value="title-asc">По названию</option>
+                </select>
+              </label>
+              <div className="view-switcher" role="group" aria-label="Режим отображения">
+                <button
+                  type="button"
+                  onClick={() => setViewMode("grid")}
+                  aria-label="Плитка"
+                  aria-pressed={viewMode === "grid"}
+                  title="Плитка"
+                >
+                  <svg viewBox="0 0 16 16" aria-hidden="true">
+                    <rect x="2" y="2" width="4.5" height="4.5" rx="1" />
+                    <rect x="9.5" y="2" width="4.5" height="4.5" rx="1" />
+                    <rect x="2" y="9.5" width="4.5" height="4.5" rx="1" />
+                    <rect x="9.5" y="9.5" width="4.5" height="4.5" rx="1" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("list")}
+                  aria-label="Список"
+                  aria-pressed={viewMode === "list"}
+                  title="Список"
+                >
+                  <svg viewBox="0 0 16 16" aria-hidden="true">
+                    <path d="M5 3h9M5 8h9M5 13h9" />
+                    <circle cx="2" cy="3" r=".7" />
+                    <circle cx="2" cy="8" r=".7" />
+                    <circle cx="2" cy="13" r=".7" />
+                  </svg>
+                </button>
+              </div>
+              <button
+                className="reset-button"
+                type="button"
+                onClick={resetFilters}
+                disabled={!hasActiveFilters}
+              >
+                Reset filters
+              </button>
+            </div>
           </div>
         </section>
 
@@ -442,8 +509,8 @@ export function App({
           ) : null}
 
           {!catalog.loading && !catalog.error && catalog.response && catalog.response.items.length > 0 ? (
-            <div className="slide-grid">
-              {catalog.response.items.map((item) => (
+            <div className={`slide-grid slide-grid--${viewMode}`}>
+              {visibleItems.map((item) => (
                 <SlideCard
                   key={item.id}
                   item={item}

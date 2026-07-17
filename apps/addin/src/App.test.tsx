@@ -153,6 +153,37 @@ describe("Slide Library application", () => {
     );
   });
 
+  it("switches between grid and list views and sorts catalog items", async () => {
+    const alphaSlide = { ...strategySlide, title: "Alpha strategy" };
+    const api = createApi(async () => ({
+      items: [alphaSlide, revenueSlide],
+      total: 2,
+      availableCategories: ["Finance", "Strategy"]
+    }));
+
+    render(<App api={api} powerPointService={createAvailablePowerPointService()} />);
+
+    expect(await screen.findByText(revenueSlide.title)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Плитка" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Список" }));
+    expect(screen.getByRole("button", { name: "Список" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Sort slides" }), {
+      target: { value: "title-asc" }
+    });
+
+    const cards = screen.getAllByRole("article");
+    expect(cards).toHaveLength(2);
+    expect(within(cards[0]!).getByText("Alpha strategy")).toBeInTheDocument();
+  });
+
   it("shows no-results guidance when content exists but the current selection has no matches", async () => {
     const api = createApi(async () => ({
       items: [],
