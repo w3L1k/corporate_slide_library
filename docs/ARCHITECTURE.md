@@ -90,7 +90,7 @@ The API surface is ID-based:
 | `GET /api/slides/:id` | Returns one registered item's metadata. |
 | `GET /api/slides/:id/preview` | Reads the item's registered image and sends its image content type. |
 | `GET /api/slides/:id/file` | Reads the item's registered PPTX with the Open XML presentation content type. |
-| `GET /api/personal-assets` | Returns locally registered personal PPTX, photo, and logo metadata. |
+| `GET /api/personal-assets` | Returns locally registered personal PPTX, photo, illustration, and logo metadata. |
 | `POST /api/personal-assets` | Validates and stores one uploaded personal asset under a server-generated ID. |
 | `GET /api/personal-assets/:id/file` | Sends only the binary registered for the supplied personal-asset ID. |
 | `DELETE /api/personal-assets/:id` | Removes one registered personal asset and its binary after UUID validation. |
@@ -166,7 +166,7 @@ sequenceDiagram
 
 The service does not provide `sourceSlideIds`, so PowerPoint inserts every slide in the source file; the one-slide content invariant is therefore important. It does not provide `targetSlideId`, so the API's default placement applies (the beginning of the target presentation). It explicitly requests `KeepSourceFormatting`.
 
-Personal PPTX files reuse the same Base64 insertion path. Raster photos and logos are downloaded only after the user presses **Добавить**, converted to Base64, and passed to `Office.context.document.setSelectedDataAsync` with image coercion. Sanitized SVG logos are passed as XML with `XmlSvg` coercion. PowerPoint places the visual on the active slide or into a suitable selected placeholder according to the host's selection behavior.
+Personal PPTX files reuse the same Base64 insertion path. Raster photos, illustrations, and logos are downloaded only after the user presses **Добавить**, converted to Base64, and passed to `Office.context.document.setSelectedDataAsync` with image coercion. Sanitized SVG illustrations and logos are passed as XML with `XmlSvg` coercion. PowerPoint places the visual on the active slide or into a suitable selected placeholder according to the host's selection behavior.
 
 Personal deletion is also ID-based. The storage adapter moves the registered binary to a temporary contained path, atomically replaces the personal index, and then removes the temporary file. If the index update fails, it restores the binary before returning an error. The client never supplies a filesystem path.
 

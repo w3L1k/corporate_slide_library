@@ -6,7 +6,7 @@ import { PowerPointUnavailableError, type PowerPointService } from "./types";
 const IMAGE_INSERTION_UNAVAILABLE_MESSAGE =
   "This version of PowerPoint does not support inserting images from the personal library.";
 const SVG_INSERTION_UNAVAILABLE_MESSAGE =
-  "This version of PowerPoint does not support SVG insertion. Upload a PNG version of the logo or update PowerPoint.";
+  "This version of PowerPoint does not support SVG insertion. Upload a PNG version of the image or update PowerPoint.";
 const RASTER_IMAGE_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 
 export interface PresentationRuntime {

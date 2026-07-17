@@ -12,6 +12,7 @@ const MAX_FILE_SIZE = 20 * 1024 * 1024;
 const kindLabels: Record<PersonalAssetKind, string> = {
   presentation: "Презентации",
   photo: "Фотографии",
+  illustration: "Иллюстрации",
   logo: "Логотипы"
 };
 
@@ -19,18 +20,22 @@ const kindAccepts: Record<PersonalAssetKind, string> = {
   presentation:
     ".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation",
   photo: ".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp",
+  illustration:
+    ".png,.jpg,.jpeg,.webp,.svg,image/png,image/jpeg,image/webp,image/svg+xml",
   logo: ".png,.jpg,.jpeg,.webp,.svg,image/png,image/jpeg,image/webp,image/svg+xml"
 };
 
 const kindHints: Record<PersonalAssetKind, string> = {
   presentation: "PPTX до 20 МБ",
   photo: "PNG, JPEG или WebP до 20 МБ",
+  illustration: "PNG, JPEG, WebP или безопасный SVG до 20 МБ",
   logo: "PNG, JPEG, WebP или безопасный SVG до 20 МБ"
 };
 
 const insertionSuccessMessages: Record<PersonalAssetKind, string> = {
   presentation: "Презентация добавлена в PowerPoint.",
   photo: "Фотография добавлена на текущий слайд.",
+  illustration: "Иллюстрация добавлена на текущий слайд.",
   logo: "Логотип добавлен на текущий слайд."
 };
 

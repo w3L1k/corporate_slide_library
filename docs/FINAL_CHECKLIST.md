@@ -51,7 +51,7 @@ Checked items are present in the repository or were verified by direct static/pa
 - [x] Dialog focus entry/return, Escape close, and Tab focus trapping are implemented.
 - [x] Loading skeleton, API error/retry, empty-catalog, filtered-no-results, and preview-placeholder states are implemented.
 - [x] Insertion disables competing insert controls and reports progress, success, unavailable host, and failure.
-- [x] Personal PPTX, photo, and logo cards expose insertion controls with progress and browser fallback states.
+- [x] Personal PPTX, photo, illustration, and logo sections are clickable and their cards expose insertion controls with progress and browser fallback states.
 - [x] Personal cards require an explicit confirmation before deletion and support cancellation.
 - [x] Browser mode uses an explicit catalog-preview notice and never fakes insertion.
 - [x] React UI and service automated tests are present.
@@ -83,9 +83,9 @@ Checked items are present in the repository or were verified by direct static/pa
 - [x] `npm run validate-library` passes against all 12 final demo items.
 - [x] `npm run lint` passes in the final revision.
 - [x] `npm run typecheck` passes in the final revision, including tools.
-- [x] `npm run test` passes: 53 server tests and 37 add-in tests.
+- [x] `npm run test` passes: 53 server tests and 38 add-in tests.
 - [x] `npm run build` passes in the final revision.
-- [x] The aggregate `npm run check` passes: library validation, manifest validation, lint (0 errors), typecheck, 90 tests (53 server + 37 add-in), builds.
+- [x] The aggregate `npm run check` passes: library validation, manifest validation, lint (0 errors), typecheck, 91 tests (53 server + 38 add-in), builds.
 - [x] `npm audit` reports 0 known vulnerabilities for the installed dependency tree.
 
 ## Pilot readiness boundary

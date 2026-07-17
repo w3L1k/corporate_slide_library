@@ -355,8 +355,10 @@ export function App({
                     : ""
                 }`}
                 type="button"
-                disabled={libraryScope === "public"}
-                onClick={() => setPersonalKind("photo")}
+                onClick={() => {
+                  setLibraryScope("personal");
+                  setPersonalKind("photo");
+                }}
                 aria-current={
                   libraryScope === "personal" && personalKind === "photo"
                     ? "page"
@@ -366,7 +368,23 @@ export function App({
                 <span aria-hidden="true">▣</span>
                 <strong>Фотографии</strong>
               </button>
-              <button className="library-sidebar__item" type="button" disabled>
+              <button
+                className={`library-sidebar__item ${
+                  libraryScope === "personal" && personalKind === "illustration"
+                    ? "library-sidebar__item--active"
+                    : ""
+                }`}
+                type="button"
+                onClick={() => {
+                  setLibraryScope("personal");
+                  setPersonalKind("illustration");
+                }}
+                aria-current={
+                  libraryScope === "personal" && personalKind === "illustration"
+                    ? "page"
+                    : undefined
+                }
+              >
                 <span aria-hidden="true">◇</span>
                 <strong>Иллюстрации</strong>
               </button>
@@ -381,8 +399,10 @@ export function App({
                     : ""
                 }`}
                 type="button"
-                disabled={libraryScope === "public"}
-                onClick={() => setPersonalKind("logo")}
+                onClick={() => {
+                  setLibraryScope("personal");
+                  setPersonalKind("logo");
+                }}
                 aria-current={
                   libraryScope === "personal" && personalKind === "logo"
                     ? "page"
@@ -414,6 +434,7 @@ export function App({
           <div className="workspace-content">
         {libraryScope === "personal" ? (
           <PersonalLibrary
+            key={personalKind}
             api={api}
             kind={personalKind}
             powerPointService={powerPointService}

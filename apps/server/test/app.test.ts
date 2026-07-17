@@ -220,7 +220,7 @@ describe("slide catalog API", () => {
     expect(response.headers["content-type"]).toContain("image/jpeg");
   });
 
-  it("uploads and serves registered personal presentations, photos, and logos", async () => {
+  it("uploads and serves registered personal presentations, photos, illustrations, and logos", async () => {
     const photo = await request(app)
       .post("/api/personal-assets")
       .field("kind", "photo")
@@ -237,6 +237,16 @@ describe("slide catalog API", () => {
       .field("title", "Логотип продукта")
       .attach("file", Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"></svg>'), "logo.svg")
       .expect(201);
+    const illustration = await request(app)
+      .post("/api/personal-assets")
+      .field("kind", "illustration")
+      .field("title", "Иллюстрация продукта")
+      .attach(
+        "file",
+        Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0h1v1z"/></svg>'),
+        "illustration.svg"
+      )
+      .expect(201);
     const presentation = await request(app)
       .post("/api/personal-assets")
       .field("kind", "presentation")
@@ -246,14 +256,19 @@ describe("slide catalog API", () => {
 
     expect(photo.body).toMatchObject({ kind: "photo", mimeType: "image/png" });
     expect(logo.body).toMatchObject({ kind: "logo", mimeType: "image/svg+xml" });
+    expect(illustration.body).toMatchObject({
+      kind: "illustration",
+      mimeType: "image/svg+xml"
+    });
     expect(presentation.body).toMatchObject({
       kind: "presentation",
       mimeType: "application/vnd.openxmlformats-officedocument.presentationml.presentation"
     });
 
     const list = await request(app).get("/api/personal-assets").expect(200);
-    expect(list.body.total).toBe(3);
+    expect(list.body.total).toBe(4);
     expect(list.body.items.map((item: { kind: string }) => item.kind).sort()).toEqual([
+      "illustration",
       "logo",
       "photo",
       "presentation"
@@ -269,7 +284,7 @@ describe("slide catalog API", () => {
 
     await request(app).delete(`/api/personal-assets/${photo.body.id}`).expect(204);
     const listAfterDelete = await request(app).get("/api/personal-assets").expect(200);
-    expect(listAfterDelete.body.total).toBe(2);
+    expect(listAfterDelete.body.total).toBe(3);
     expect(
       listAfterDelete.body.items.map((item: { id: string }) => item.id)
     ).not.toContain(photo.body.id);

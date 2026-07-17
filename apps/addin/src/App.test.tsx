@@ -65,12 +65,13 @@ describe("Slide Library application", () => {
     render(<App api={api} powerPointService={createAvailablePowerPointService()} />);
 
     await screen.findByText(revenueSlide.title);
-    fireEvent.click(screen.getByRole("button", { name: "Личное" }));
     fireEvent.click(screen.getByRole("button", { name: "Фотографии" }));
 
-    expect(
-      screen.getByRole("heading", { name: "Фотографии" })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Личное" })).toHaveAttribute(
+      "aria-current",
+      "page"
+    );
+    expect(screen.getByRole("heading", { name: "Фотографии" })).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Название"), {
       target: { value: "Командная фотография" }
@@ -94,6 +95,44 @@ describe("Slide Library application", () => {
     );
     expect(await screen.findByText("Командная фотография")).toBeInTheDocument();
     expect(screen.getByText("Файл добавлен в личную библиотеку.")).toBeInTheDocument();
+  });
+
+  it("opens illustrations from the public library and uploads an illustration", async () => {
+    const api = createApi();
+    render(<App api={api} powerPointService={createAvailablePowerPointService()} />);
+
+    await screen.findByText(revenueSlide.title);
+    const illustrationsButton = screen.getByRole("button", { name: "Иллюстрации" });
+    expect(illustrationsButton).toBeEnabled();
+    fireEvent.click(illustrationsButton);
+
+    expect(screen.getByRole("button", { name: "Личное" })).toHaveAttribute(
+      "aria-current",
+      "page"
+    );
+    expect(screen.getByRole("heading", { name: "Иллюстрации" })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Название"), {
+      target: { value: "Иллюстрация продукта" }
+    });
+    const file = new File(
+      ['<svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0h1v1z"/></svg>'],
+      "illustration.svg",
+      { type: "image/svg+xml" }
+    );
+    fireEvent.change(screen.getByLabelText("Файл"), {
+      target: { files: [file] }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Добавить" }));
+
+    await waitFor(() =>
+      expect(api.uploadPersonalAsset).toHaveBeenCalledWith(
+        "illustration",
+        "Иллюстрация продукта",
+        file
+      )
+    );
+    expect(await screen.findByText("Иллюстрация продукта")).toBeInTheDocument();
   });
 
   it("inserts a personal photo into PowerPoint and reports progress", async () => {

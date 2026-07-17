@@ -78,7 +78,12 @@ export interface ReindexResponse {
   refreshedAt: string;
 }
 
-export const personalAssetKindValues = ["presentation", "photo", "logo"] as const;
+export const personalAssetKindValues = [
+  "presentation",
+  "photo",
+  "illustration",
+  "logo"
+] as const;
 export const PersonalAssetKindSchema = z.enum(personalAssetKindValues);
 export type PersonalAssetKind = z.infer<typeof PersonalAssetKindSchema>;
 

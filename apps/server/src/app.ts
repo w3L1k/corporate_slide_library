@@ -135,6 +135,8 @@ function validatePersonalUpload(
 ): ValidatedUpload {
   const extension = path.extname(file.originalname).toLowerCase();
   const buffer = file.buffer;
+  const isImageKind =
+    kind === "photo" || kind === "illustration" || kind === "logo";
 
   if (
     kind === "presentation" &&
@@ -145,7 +147,7 @@ function validatePersonalUpload(
   }
 
   if (
-    (kind === "photo" || kind === "logo") &&
+    isImageKind &&
     extension === ".png" &&
     startsWithBytes(buffer, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
   ) {
@@ -153,7 +155,7 @@ function validatePersonalUpload(
   }
 
   if (
-    (kind === "photo" || kind === "logo") &&
+    isImageKind &&
     [".jpg", ".jpeg"].includes(extension) &&
     startsWithBytes(buffer, [0xff, 0xd8, 0xff])
   ) {
@@ -161,21 +163,25 @@ function validatePersonalUpload(
   }
 
   if (
-    (kind === "photo" || kind === "logo") &&
+    isImageKind &&
     extension === ".webp" &&
     isWebp(buffer)
   ) {
     return { extension, mimeType: "image/webp" };
   }
 
-  if (kind === "logo" && extension === ".svg" && isSafeSvg(buffer)) {
+  if (
+    (kind === "illustration" || kind === "logo") &&
+    extension === ".svg" &&
+    isSafeSvg(buffer)
+  ) {
     return { extension, mimeType: "image/svg+xml" };
   }
 
   throw new ApiError(
     400,
     "UNSUPPORTED_PERSONAL_ASSET",
-    "Upload a PPTX presentation, PNG/JPEG/WebP photo, or PNG/JPEG/WebP/SVG logo"
+    "Upload a PPTX presentation, PNG/JPEG/WebP photo, or PNG/JPEG/WebP/SVG illustration or logo"
   );
 }
 
