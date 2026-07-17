@@ -41,4 +41,30 @@ describe("OfficePowerPointService", () => {
     expect(sync).toHaveBeenCalledTimes(1);
     expect(events).toEqual(["run", "insert", "sync"]);
   });
+
+  it("downloads and inserts multiple slides in catalog order with one sync", async () => {
+    const insertSlidesFromBase64 = vi.fn();
+    const sync = vi.fn(async () => undefined);
+    const context: PowerPointRequestContextRuntime = {
+      presentation: { insertSlidesFromBase64 },
+      sync
+    };
+    const runtime: PowerPointRuntime = {
+      run: async <T>(batch: (value: PowerPointRequestContextRuntime) => Promise<T>) =>
+        batch(context)
+    };
+    const downloadSlide = vi.fn(async (id: string) =>
+      new TextEncoder().encode(id).buffer
+    );
+    const service = new OfficePowerPointService({ downloadSlide }, runtime);
+
+    await service.insertSlides(["first-slide", "second-slide"]);
+
+    expect(downloadSlide.mock.calls.map(([id]) => id)).toEqual([
+      "first-slide",
+      "second-slide"
+    ]);
+    expect(insertSlidesFromBase64).toHaveBeenCalledTimes(2);
+    expect(sync).toHaveBeenCalledTimes(1);
+  });
 });

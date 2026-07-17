@@ -9,9 +9,11 @@ interface SlideCardProps {
   inserting: boolean;
   insertionBlocked: boolean;
   favorite: boolean;
+  selected: boolean;
   onOpen(): void;
   onInsert(): void;
   onToggleFavorite(): void;
+  onToggleSelection(): void;
 }
 
 export function SlideCard({
@@ -20,12 +22,30 @@ export function SlideCard({
   inserting,
   insertionBlocked,
   favorite,
+  selected,
   onOpen,
   onInsert,
-  onToggleFavorite
+  onToggleFavorite,
+  onToggleSelection
 }: SlideCardProps) {
   return (
-    <article className="slide-card" aria-labelledby={`slide-${item.id}-title`}>
+    <article
+      className={`slide-card ${selected ? "slide-card--selected" : ""}`}
+      aria-labelledby={`slide-${item.id}-title`}
+    >
+      <button
+        className="slide-card__select"
+        type="button"
+        onClick={onToggleSelection}
+        aria-label={`${selected ? "Deselect" : "Select"} ${item.title}`}
+        aria-pressed={selected}
+        title={selected ? "Снять выбор" : "Выбрать слайд"}
+      >
+        <svg viewBox="0 0 20 20" aria-hidden="true">
+          <rect x="3" y="3" width="14" height="14" rx="4" />
+          {selected ? <path d="M6.5 10l2.2 2.3 4.8-5" /> : null}
+        </svg>
+      </button>
       <button
         className="slide-card__favorite"
         type="button"

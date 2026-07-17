@@ -55,7 +55,12 @@ export const createAvailablePowerPointService = (
 ): PowerPointService => ({
   isAvailable: () => true,
   getUnavailableReason: () => null,
-  insertSlide: vi.fn(insertSlideImplementation)
+  insertSlide: vi.fn(insertSlideImplementation),
+  insertSlides: vi.fn(async (slideIds: readonly string[]) => {
+    for (const slideId of slideIds) {
+      await insertSlideImplementation(slideId);
+    }
+  })
 });
 
 export interface Deferred<T> {

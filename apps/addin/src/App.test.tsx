@@ -287,6 +287,36 @@ describe("Slide Library application", () => {
     expect(screen.getByRole("button", { name: `Insert ${revenueSlide.title}` })).toBeEnabled();
   });
 
+  it("selects and inserts multiple slides in the visible catalog order", async () => {
+    const api = createApi(async () => ({
+      items: [strategySlide, revenueSlide],
+      total: 2,
+      availableCategories: ["Finance", "Strategy"]
+    }));
+    const powerPointService = createAvailablePowerPointService();
+
+    render(<App api={api} powerPointService={powerPointService} />);
+
+    await screen.findByText(revenueSlide.title);
+    fireEvent.click(
+      screen.getByRole("button", { name: `Select ${strategySlide.title}` })
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: `Select ${revenueSlide.title}` })
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Добавить выбранные (2)" }));
+
+    await waitFor(() =>
+      expect(powerPointService.insertSlides).toHaveBeenCalledWith([
+        revenueSlide.id,
+        strategySlide.id
+      ])
+    );
+    expect(await screen.findByText("2 slides inserted successfully")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Выбранные слайды")).not.toBeInTheDocument();
+  });
+
   it("reports insertion failures and restores the insert controls", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const insertSlide = vi.fn(async () => {

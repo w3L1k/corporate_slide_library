@@ -25,6 +25,7 @@ type SortOrder = "updated-desc" | "title-asc";
 
 const DEFAULT_STATUS: StatusFilter = "approved";
 const DEFAULT_DEBOUNCE_MS = 300;
+const MULTI_INSERT_ID = "__multiple__";
 
 interface AppProps {
   api?: SlideLibraryApi;
@@ -68,6 +69,7 @@ export function App({
   const [catalog, setCatalog] = useState<CatalogState>(initialCatalogState);
   const [categories, setCategories] = useState<string[]>([]);
   const [selectedSlide, setSelectedSlide] = useState<SlideLibraryItem | null>(null);
+  const [selectedSlideIds, setSelectedSlideIds] = useState<Set<string>>(new Set());
   const [insertingId, setInsertingId] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const { favoriteIds, toggleFavorite } = useFavorites();
@@ -185,6 +187,55 @@ export function App({
     () => visibleItems.filter((item) => favoriteIds.has(item.id)),
     [favoriteIds, visibleItems]
   );
+  const selectedItems = useMemo(
+    () => visibleItems.filter((item) => selectedSlideIds.has(item.id)),
+    [selectedSlideIds, visibleItems]
+  );
+
+  const toggleSlideSelection = useCallback((id: string): void => {
+    setSelectedSlideIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
+
+  const insertSelectedSlides = useCallback(async (): Promise<void> => {
+    if (insertingId !== null || selectedItems.length === 0) {
+      return;
+    }
+
+    setInsertingId(MULTI_INSERT_ID);
+    try {
+      await powerPointService.insertSlides(selectedItems.map((item) => item.id));
+      setSelectedSlideIds(new Set());
+      setToast({
+        kind: "success",
+        text: `${selectedItems.length} ${
+          selectedItems.length === 1 ? "slide" : "slides"
+        } inserted successfully`
+      });
+    } catch (error: unknown) {
+      if (import.meta.env.DEV && !(error instanceof PowerPointUnavailableError)) {
+        console.error("Multiple slide insertion failed", error);
+      }
+
+      const message =
+        error instanceof PowerPointUnavailableError
+          ? error.message
+          : `Could not insert selected slides. ${getErrorMessage(error)}`;
+      setToast({
+        kind: error instanceof PowerPointUnavailableError ? "info" : "error",
+        text: message
+      });
+    } finally {
+      setInsertingId(null);
+    }
+  }, [insertingId, powerPointService, selectedItems]);
 
   return (
     <div className="app-shell">
@@ -439,6 +490,40 @@ export function App({
           </div>
         </section>
 
+        {selectedItems.length > 0 ? (
+          <section className="selection-toolbar" aria-label="Выбранные слайды">
+            <div>
+              <strong>Выбрано: {selectedItems.length}</strong>
+              <span>Слайды будут добавлены в указанном порядке.</span>
+            </div>
+            <div className="selection-toolbar__actions">
+              <button
+                className="button button--secondary button--compact"
+                type="button"
+                onClick={() => setSelectedSlideIds(new Set())}
+                disabled={insertingId !== null}
+              >
+                Отменить выбор
+              </button>
+              <button
+                className="button button--primary button--compact"
+                type="button"
+                onClick={() => void insertSelectedSlides()}
+                disabled={insertingId !== null}
+              >
+                {insertingId === MULTI_INSERT_ID ? (
+                  <>
+                    <span className="spinner" aria-hidden="true" />
+                    Добавляем…
+                  </>
+                ) : (
+                  <>Добавить выбранные ({selectedItems.length})</>
+                )}
+              </button>
+            </div>
+          </section>
+        ) : null}
+
         <section
           className="catalog-content"
           aria-label="Slide catalog"
@@ -473,7 +558,9 @@ export function App({
                   inserting={insertingId === item.id}
                   insertionBlocked={insertingId !== null}
                   favorite
+                  selected={selectedSlideIds.has(item.id)}
                   onToggleFavorite={() => toggleFavorite(item.id)}
+                  onToggleSelection={() => toggleSlideSelection(item.id)}
                   onOpen={() => setSelectedSlide(item)}
                   onInsert={() => void insertSlide(item)}
                 />
@@ -542,7 +629,9 @@ export function App({
                   inserting={insertingId === item.id}
                   insertionBlocked={insertingId !== null}
                   favorite={favoriteIds.has(item.id)}
+                  selected={selectedSlideIds.has(item.id)}
                   onToggleFavorite={() => toggleFavorite(item.id)}
+                  onToggleSelection={() => toggleSlideSelection(item.id)}
                   onOpen={() => setSelectedSlide(item)}
                   onInsert={() => void insertSlide(item)}
                 />

@@ -5,6 +5,7 @@ export interface PowerPointService {
   isAvailable(): boolean;
   getUnavailableReason(): string | null;
   insertSlide(slideId: string): Promise<void>;
+  insertSlides(slideIds: readonly string[]): Promise<void>;
 }
 
 export class PowerPointUnavailableError extends Error {

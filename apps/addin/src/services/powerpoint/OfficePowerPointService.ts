@@ -36,13 +36,23 @@ export class OfficePowerPointService implements PowerPointService {
   }
 
   async insertSlide(slideId: string): Promise<void> {
-    const slideFile = await this.api.downloadSlide(slideId);
-    const base64File = arrayBufferToBase64(slideFile);
+    await this.insertSlides([slideId]);
+  }
+
+  async insertSlides(slideIds: readonly string[]): Promise<void> {
+    if (slideIds.length === 0) {
+      return;
+    }
+
+    const slideFiles = await Promise.all(slideIds.map((slideId) => this.api.downloadSlide(slideId)));
+    const base64Files = slideFiles.map(arrayBufferToBase64);
 
     await this.runtime.run(async (context) => {
-      context.presentation.insertSlidesFromBase64(base64File, {
-        formatting: "KeepSourceFormatting"
-      });
+      for (const base64File of base64Files) {
+        context.presentation.insertSlidesFromBase64(base64File, {
+          formatting: "KeepSourceFormatting"
+        });
+      }
       await context.sync();
     });
   }

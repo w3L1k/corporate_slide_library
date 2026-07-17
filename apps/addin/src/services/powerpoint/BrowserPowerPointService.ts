@@ -23,4 +23,9 @@ export class BrowserPowerPointService implements PowerPointService {
     void slideId;
     throw new PowerPointUnavailableError(this.unavailableMessage);
   }
+
+  async insertSlides(slideIds: readonly string[]): Promise<void> {
+    void slideIds;
+    throw new PowerPointUnavailableError(this.unavailableMessage);
+  }
 }
