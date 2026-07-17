@@ -163,32 +163,87 @@ export function App({
     <div className="app-shell">
       <header className="app-header">
         <div className="brand">
-          <span className="brand__mark" aria-hidden="true">
+          <button className="profile-button" type="button" aria-label="Открыть профиль">
             <svg viewBox="0 0 24 24">
-              <rect x="4" y="5" width="16" height="11" rx="2" />
-              <path d="M8 9h5M8 12h8M9 20h6M12 16v4" />
+              <circle cx="12" cy="8" r="3.5" />
+              <path d="M5.5 19c.8-3.2 3-5 6.5-5s5.7 1.8 6.5 5" />
             </svg>
-          </span>
-          <div>
-            <h1>Slide Library</h1>
-            <p>{currentSubtitle}</p>
-          </div>
+          </button>
+          <h1>Slidebrary</h1>
         </div>
-        <button
-          className="icon-button icon-button--refresh"
-          type="button"
-          onClick={() => setRefreshKey((value) => value + 1)}
-          aria-label="Refresh library"
-          title="Refresh library"
-          disabled={catalog.loading}
-        >
-          <svg className={catalog.loading ? "is-spinning" : ""} viewBox="0 0 20 20" aria-hidden="true">
-            <path d="M15.5 6.2A6 6 0 104 13.8M15.5 6.2V2.8M15.5 6.2h-3.4" />
-          </svg>
-        </button>
+        <div className="header-actions">
+          <span className="header-status">{currentSubtitle}</span>
+          <button
+            className="icon-button icon-button--refresh"
+            type="button"
+            onClick={() => setRefreshKey((value) => value + 1)}
+            aria-label="Refresh library"
+            title="Refresh library"
+            disabled={catalog.loading}
+          >
+            <svg className={catalog.loading ? "is-spinning" : ""} viewBox="0 0 20 20" aria-hidden="true">
+              <path d="M15.5 6.2A6 6 0 104 13.8M15.5 6.2V2.8M15.5 6.2h-3.4" />
+            </svg>
+          </button>
+        </div>
       </header>
 
       <main>
+        <nav className="scope-tabs" aria-label="Область библиотеки">
+          <button className="scope-tabs__item scope-tabs__item--active" type="button">
+            Публичное
+          </button>
+          <button className="scope-tabs__item" type="button" disabled>
+            Личное
+          </button>
+        </nav>
+
+        <div className="workspace-layout">
+          <aside className="library-sidebar" aria-label="Разделы библиотеки">
+            <div className="library-sidebar__rail" aria-hidden="true">
+              <span>‹</span>
+            </div>
+            <div className="library-sidebar__menu">
+              <div className="library-sidebar__item library-sidebar__item--active">
+                <span aria-hidden="true">♡</span>
+                <strong>Избранное</strong>
+              </div>
+              <div className="library-sidebar__item">
+                <span aria-hidden="true">▧</span>
+                <strong>Презентации</strong>
+              </div>
+              <div className="library-sidebar__item">
+                <span aria-hidden="true">▣</span>
+                <strong>Фотографии</strong>
+              </div>
+              <div className="library-sidebar__item">
+                <span aria-hidden="true">◇</span>
+                <strong>Иллюстрации</strong>
+              </div>
+              <div className="library-sidebar__item">
+                <span aria-hidden="true">◎</span>
+                <strong>Иконки</strong>
+              </div>
+              <div className="library-sidebar__item">
+                <span aria-hidden="true">A</span>
+                <strong>Логотипы</strong>
+              </div>
+              <div className="library-sidebar__item">
+                <span aria-hidden="true">⊞</span>
+                <strong>Шаблоны</strong>
+              </div>
+              <div className="library-sidebar__item">
+                <span aria-hidden="true">✦</span>
+                <strong>Продукты</strong>
+              </div>
+              <div className="library-sidebar__item library-sidebar__item--muted">
+                <span aria-hidden="true">✧</span>
+                <strong>ИИ-ассистент</strong>
+              </div>
+            </div>
+          </aside>
+
+          <div className="workspace-content">
         {powerPointUnavailableReason ? (
           <aside className="environment-notice" aria-label="PowerPoint integration status">
             <span className="environment-notice__icon" aria-hidden="true">
@@ -357,6 +412,8 @@ export function App({
             </div>
           ) : null}
         </section>
+          </div>
+        </div>
       </main>
 
       {selectedSlide ? (
