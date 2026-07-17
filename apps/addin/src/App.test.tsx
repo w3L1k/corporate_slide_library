@@ -16,6 +16,19 @@ import {
 } from "./test/fixtures";
 
 describe("Slide Library application", () => {
+  it("switches between presentations and the empty favorites section", async () => {
+    render(<App api={createApi()} powerPointService={createAvailablePowerPointService()} />);
+
+    expect(await screen.findByText(revenueSlide.title)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Избранное" }));
+
+    expect(screen.getByRole("heading", { name: "Избранное пока пусто" })).toBeInTheDocument();
+    expect(screen.queryByText(revenueSlide.title)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Открыть презентации" }));
+    expect(screen.getByText(revenueSlide.title)).toBeInTheDocument();
+  });
+
   it("shows an accessible loading state until the catalog request completes", async () => {
     const catalog = createDeferred<SlideListResponse>();
     const api = createApi(() => catalog.promise);

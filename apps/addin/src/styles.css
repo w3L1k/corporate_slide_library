@@ -284,13 +284,17 @@ main {
 
 .library-sidebar__item {
   display: grid;
+  width: 100%;
   min-height: 38px;
   grid-template-columns: 25px minmax(0, 1fr);
   align-items: center;
   padding: 0 8px;
+  border: 0;
   border-radius: 9px;
   color: #7c8494;
+  background: transparent;
   font-size: 11px;
+  text-align: left;
 }
 
 .library-sidebar__item span {
@@ -307,6 +311,15 @@ main {
 .library-sidebar__item--active {
   color: #1f76e8;
   background: #eef6ff;
+}
+
+.library-sidebar__item:hover:not(:disabled) {
+  color: #365d91;
+  background: #f4f7fb;
+}
+
+.library-sidebar__item:disabled {
+  cursor: default;
 }
 
 .library-sidebar__item--active strong {

@@ -18,6 +18,7 @@ import {
 import "./styles.css";
 
 type StatusFilter = SlideStatus | "";
+type LibrarySection = "favorites" | "presentations";
 
 const DEFAULT_STATUS: StatusFilter = "approved";
 const DEFAULT_DEBOUNCE_MS = 300;
@@ -54,6 +55,7 @@ export function App({
   searchDebounceMs = DEFAULT_DEBOUNCE_MS
 }: AppProps) {
   const [query, setQuery] = useState("");
+  const [activeSection, setActiveSection] = useState<LibrarySection>("presentations");
   const debouncedQuery = useDebouncedValue(query.trim(), searchDebounceMs);
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState<StatusFilter>(DEFAULT_STATUS);
@@ -204,42 +206,60 @@ export function App({
               <span>‹</span>
             </div>
             <div className="library-sidebar__menu">
-              <div className="library-sidebar__item library-sidebar__item--active">
+              <button
+                className={`library-sidebar__item ${
+                  activeSection === "favorites" ? "library-sidebar__item--active" : ""
+                }`}
+                type="button"
+                onClick={() => setActiveSection("favorites")}
+                aria-current={activeSection === "favorites" ? "page" : undefined}
+              >
                 <span aria-hidden="true">♡</span>
                 <strong>Избранное</strong>
-              </div>
-              <div className="library-sidebar__item">
+              </button>
+              <button
+                className={`library-sidebar__item ${
+                  activeSection === "presentations" ? "library-sidebar__item--active" : ""
+                }`}
+                type="button"
+                onClick={() => setActiveSection("presentations")}
+                aria-current={activeSection === "presentations" ? "page" : undefined}
+              >
                 <span aria-hidden="true">▧</span>
                 <strong>Презентации</strong>
-              </div>
-              <div className="library-sidebar__item">
+              </button>
+              <button className="library-sidebar__item" type="button" disabled>
                 <span aria-hidden="true">▣</span>
                 <strong>Фотографии</strong>
-              </div>
-              <div className="library-sidebar__item">
+              </button>
+              <button className="library-sidebar__item" type="button" disabled>
                 <span aria-hidden="true">◇</span>
                 <strong>Иллюстрации</strong>
-              </div>
-              <div className="library-sidebar__item">
+              </button>
+              <button className="library-sidebar__item" type="button" disabled>
                 <span aria-hidden="true">◎</span>
                 <strong>Иконки</strong>
-              </div>
-              <div className="library-sidebar__item">
+              </button>
+              <button className="library-sidebar__item" type="button" disabled>
                 <span aria-hidden="true">A</span>
                 <strong>Логотипы</strong>
-              </div>
-              <div className="library-sidebar__item">
+              </button>
+              <button className="library-sidebar__item" type="button" disabled>
                 <span aria-hidden="true">⊞</span>
                 <strong>Шаблоны</strong>
-              </div>
-              <div className="library-sidebar__item">
+              </button>
+              <button className="library-sidebar__item" type="button" disabled>
                 <span aria-hidden="true">✦</span>
                 <strong>Продукты</strong>
-              </div>
-              <div className="library-sidebar__item library-sidebar__item--muted">
+              </button>
+              <button
+                className="library-sidebar__item library-sidebar__item--muted"
+                type="button"
+                disabled
+              >
                 <span aria-hidden="true">✧</span>
                 <strong>ИИ-ассистент</strong>
-              </div>
+              </button>
             </div>
           </aside>
 
@@ -346,7 +366,32 @@ export function App({
           </div>
         </section>
 
-        <section className="catalog-content" aria-label="Slide catalog" aria-busy={catalog.loading}>
+        <section
+          className="catalog-content"
+          aria-label="Slide catalog"
+          aria-busy={activeSection === "presentations" && catalog.loading}
+        >
+          {activeSection === "favorites" ? (
+            <div className="state-panel">
+              <span className="state-panel__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z" />
+                </svg>
+              </span>
+              <h2>Избранное пока пусто</h2>
+              <p>Добавляйте часто используемые слайды, чтобы быстро находить их здесь.</p>
+              <button
+                className="button button--secondary"
+                type="button"
+                onClick={() => setActiveSection("presentations")}
+              >
+                Открыть презентации
+              </button>
+            </div>
+          ) : null}
+
+          {activeSection === "presentations" ? (
+            <>
           {catalog.loading ? <SkeletonCatalog /> : null}
 
           {!catalog.loading && catalog.error ? (
@@ -410,6 +455,8 @@ export function App({
                 />
               ))}
             </div>
+          ) : null}
+            </>
           ) : null}
         </section>
           </div>
