@@ -56,6 +56,7 @@ The current state is tracked in [FINAL_CHECKLIST.md](FINAL_CHECKLIST.md).
 ### PowerPoint behavior
 
 - Real insertion requires a host/build that supports `PowerPointApi 1.2`; availability varies by platform and version. The manifest declares that minimum and the runtime also checks it.
+- Personal raster-image insertion additionally requires `ImageCoercion 1.1`; SVG insertion requires `ImageCoercion 1.2`. The runtime checks these capabilities without disabling PPTX insertion on older compatible hosts.
 - Browser development mode deliberately cannot modify a deck. It shows the catalog and an explicit unavailable message instead of simulating success.
 - The service requests `KeepSourceFormatting`. There is no user option to use the destination theme.
 - No `targetSlideId` is supplied. Per the Office.js option contract, the inserted slide uses the API default placement at the beginning of the presentation; there is no “insert after selected slide” control.

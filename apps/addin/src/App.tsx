@@ -413,7 +413,12 @@ export function App({
 
           <div className="workspace-content">
         {libraryScope === "personal" ? (
-          <PersonalLibrary api={api} kind={personalKind} onNotify={setToast} />
+          <PersonalLibrary
+            api={api}
+            kind={personalKind}
+            powerPointService={powerPointService}
+            onNotify={setToast}
+          />
         ) : null}
 
         {libraryScope === "public" ? (

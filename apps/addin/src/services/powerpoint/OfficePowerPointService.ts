@@ -1,6 +1,13 @@
+import type { PersonalAsset } from "@slide-library/shared";
 import type { SlideLibraryApi } from "../api";
 import { arrayBufferToBase64 } from "./arrayBufferToBase64";
-import type { PowerPointService } from "./types";
+import { PowerPointUnavailableError, type PowerPointService } from "./types";
+
+const IMAGE_INSERTION_UNAVAILABLE_MESSAGE =
+  "This version of PowerPoint does not support inserting images from the personal library.";
+const SVG_INSERTION_UNAVAILABLE_MESSAGE =
+  "This version of PowerPoint does not support SVG insertion. Upload a PNG version of the logo or update PowerPoint.";
+const RASTER_IMAGE_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 
 export interface PresentationRuntime {
   insertSlidesFromBase64(
@@ -18,13 +25,32 @@ export interface PowerPointRuntime {
   run<T>(batch: (context: PowerPointRequestContextRuntime) => Promise<T>): Promise<T>;
 }
 
-export class OfficePowerPointService implements PowerPointService {
-  private readonly api: Pick<SlideLibraryApi, "downloadSlide">;
-  private readonly runtime: PowerPointRuntime;
+export type ImageCoercionType = "image" | "xmlSvg";
 
-  constructor(api: Pick<SlideLibraryApi, "downloadSlide">, runtime: PowerPointRuntime) {
+export interface OfficeImageInsertionRuntime {
+  insert(data: string, coercionType: ImageCoercionType): Promise<void>;
+}
+
+export interface OfficePowerPointServiceOptions {
+  imageInsertionRuntime?: OfficeImageInsertionRuntime;
+  supportsSvgInsertion?: boolean;
+}
+
+export class OfficePowerPointService implements PowerPointService {
+  private readonly api: Pick<SlideLibraryApi, "downloadSlide" | "downloadPersonalAsset">;
+  private readonly runtime: PowerPointRuntime;
+  private readonly imageInsertionRuntime: OfficeImageInsertionRuntime | undefined;
+  private readonly supportsSvgInsertion: boolean;
+
+  constructor(
+    api: Pick<SlideLibraryApi, "downloadSlide" | "downloadPersonalAsset">,
+    runtime: PowerPointRuntime,
+    options: OfficePowerPointServiceOptions = {}
+  ) {
     this.api = api;
     this.runtime = runtime;
+    this.imageInsertionRuntime = options.imageInsertionRuntime;
+    this.supportsSvgInsertion = options.supportsSvgInsertion ?? false;
   }
 
   isAvailable(): boolean {
@@ -45,6 +71,37 @@ export class OfficePowerPointService implements PowerPointService {
     }
 
     const slideFiles = await Promise.all(slideIds.map((slideId) => this.api.downloadSlide(slideId)));
+    await this.insertPresentationFiles(slideFiles);
+  }
+
+  async insertPersonalAsset(asset: PersonalAsset): Promise<void> {
+    const file = await this.api.downloadPersonalAsset(asset.id);
+
+    if (asset.kind === "presentation") {
+      await this.insertPresentationFiles([file]);
+      return;
+    }
+
+    if (asset.mimeType === "image/svg+xml") {
+      if (!this.imageInsertionRuntime || !this.supportsSvgInsertion) {
+        throw new PowerPointUnavailableError(SVG_INSERTION_UNAVAILABLE_MESSAGE);
+      }
+
+      await this.imageInsertionRuntime.insert(new TextDecoder().decode(file), "xmlSvg");
+      return;
+    }
+
+    if (!RASTER_IMAGE_MIME_TYPES.has(asset.mimeType)) {
+      throw new Error(`Unsupported personal image format: ${asset.mimeType}`);
+    }
+    if (!this.imageInsertionRuntime) {
+      throw new PowerPointUnavailableError(IMAGE_INSERTION_UNAVAILABLE_MESSAGE);
+    }
+
+    await this.imageInsertionRuntime.insert(arrayBufferToBase64(file), "image");
+  }
+
+  private async insertPresentationFiles(slideFiles: readonly ArrayBuffer[]): Promise<void> {
     const base64Files = slideFiles.map(arrayBufferToBase64);
 
     await this.runtime.run(async (context) => {

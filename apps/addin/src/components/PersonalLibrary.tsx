@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { PersonalAsset, PersonalAssetKind } from "@slide-library/shared";
 import type { SlideLibraryApi } from "../services/api";
+import {
+  PowerPointUnavailableError,
+  type PowerPointService
+} from "../services/powerpoint";
 import type { ToastMessage } from "./Toast";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
@@ -24,9 +28,16 @@ const kindHints: Record<PersonalAssetKind, string> = {
   logo: "PNG, JPEG, WebP или безопасный SVG до 20 МБ"
 };
 
+const insertionSuccessMessages: Record<PersonalAssetKind, string> = {
+  presentation: "Презентация добавлена в PowerPoint.",
+  photo: "Фотография добавлена на текущий слайд.",
+  logo: "Логотип добавлен на текущий слайд."
+};
+
 interface PersonalLibraryProps {
   api: SlideLibraryApi;
   kind: PersonalAssetKind;
+  powerPointService: PowerPointService;
   onNotify(message: ToastMessage): void;
 }
 
@@ -42,10 +53,16 @@ const getErrorMessage = (error: unknown): string =>
     ? error.message
     : "Не удалось выполнить операцию.";
 
-export function PersonalLibrary({ api, kind, onNotify }: PersonalLibraryProps) {
+export function PersonalLibrary({
+  api,
+  kind,
+  powerPointService,
+  onNotify
+}: PersonalLibraryProps) {
   const [items, setItems] = useState<PersonalAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [insertingId, setInsertingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -107,6 +124,32 @@ export function PersonalLibrary({ api, kind, onNotify }: PersonalLibraryProps) {
       });
     } finally {
       setUploading(false);
+    }
+  };
+
+  const insertAsset = async (item: PersonalAsset): Promise<void> => {
+    if (insertingId !== null) {
+      return;
+    }
+
+    setInsertingId(item.id);
+    try {
+      await powerPointService.insertPersonalAsset(item);
+      onNotify({ kind: "success", text: insertionSuccessMessages[item.kind] });
+    } catch (insertionError: unknown) {
+      if (import.meta.env.DEV && !(insertionError instanceof PowerPointUnavailableError)) {
+        console.error("Personal asset insertion failed", insertionError);
+      }
+
+      onNotify({
+        kind: insertionError instanceof PowerPointUnavailableError ? "info" : "error",
+        text:
+          insertionError instanceof PowerPointUnavailableError
+            ? insertionError.message
+            : `Не удалось добавить материал в PowerPoint. ${getErrorMessage(insertionError)}`
+      });
+    } finally {
+      setInsertingId(null);
     }
   };
 
@@ -209,6 +252,26 @@ export function PersonalLibrary({ api, kind, onNotify }: PersonalLibraryProps) {
                 <strong>{item.title}</strong>
                 <span>{item.fileName}</span>
                 <small>{formatFileSize(item.size)}</small>
+                <button
+                  className="button button--primary personal-card__action"
+                  type="button"
+                  onClick={() => void insertAsset(item)}
+                  disabled={insertingId !== null}
+                  aria-label={
+                    insertingId === item.id
+                      ? `Добавляем ${item.title} в PowerPoint`
+                      : `Добавить ${item.title} в PowerPoint`
+                  }
+                >
+                  {insertingId === item.id ? (
+                    <>
+                      <span className="spinner" aria-hidden="true" />
+                      Добавляем…
+                    </>
+                  ) : (
+                    "Добавить"
+                  )}
+                </button>
               </div>
             </article>
           ))}

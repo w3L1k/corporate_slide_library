@@ -58,13 +58,16 @@ export const createApi = (
     size: file.size,
     createdAt: "2026-07-17T10:00:00.000Z"
   })),
+  downloadPersonalAsset: vi.fn(async () => new ArrayBuffer(0)),
   getPersonalAssetFileUrl: vi.fn(
     (id: string) => `/api/personal-assets/${encodeURIComponent(id)}/file`
   )
 });
 
 export const createAvailablePowerPointService = (
-  insertSlideImplementation: PowerPointService["insertSlide"] = async () => undefined
+  insertSlideImplementation: PowerPointService["insertSlide"] = async () => undefined,
+  insertPersonalAssetImplementation: PowerPointService["insertPersonalAsset"] = async () =>
+    undefined
 ): PowerPointService => ({
   isAvailable: () => true,
   getUnavailableReason: () => null,
@@ -73,7 +76,8 @@ export const createAvailablePowerPointService = (
     for (const slideId of slideIds) {
       await insertSlideImplementation(slideId);
     }
-  })
+  }),
+  insertPersonalAsset: vi.fn(insertPersonalAssetImplementation)
 });
 
 export interface Deferred<T> {

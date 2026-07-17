@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { SlideListResponse } from "@slide-library/shared";
+import type { PersonalAsset, SlideListResponse } from "@slide-library/shared";
 import { App } from "./App";
 import {
   BROWSER_POWERPOINT_MESSAGE,
@@ -14,6 +14,16 @@ import {
   revenueSlide,
   strategySlide
 } from "./test/fixtures";
+
+const personalPhoto: PersonalAsset = {
+  id: "11111111-1111-4111-8111-111111111111",
+  title: "Командная фотография",
+  kind: "photo",
+  fileName: "team.png",
+  mimeType: "image/png",
+  size: 2048,
+  createdAt: "2026-07-17T10:00:00.000Z"
+};
 
 describe("Slide Library application", () => {
   it("switches between presentations and the empty favorites section", async () => {
@@ -84,6 +94,73 @@ describe("Slide Library application", () => {
     );
     expect(await screen.findByText("Командная фотография")).toBeInTheDocument();
     expect(screen.getByText("Файл добавлен в личную библиотеку.")).toBeInTheDocument();
+  });
+
+  it("inserts a personal photo into PowerPoint and reports progress", async () => {
+    const insertion = createDeferred<void>();
+    const api = createApi();
+    api.listPersonalAssets = vi.fn(async () => ({
+      items: [personalPhoto],
+      total: 1
+    }));
+    const insertPersonalAsset = vi.fn(() => insertion.promise);
+    const powerPointService = createAvailablePowerPointService(
+      async () => undefined,
+      insertPersonalAsset
+    );
+
+    render(<App api={api} powerPointService={powerPointService} />);
+
+    await screen.findByText(revenueSlide.title);
+    fireEvent.click(screen.getByRole("button", { name: "Личное" }));
+    fireEvent.click(screen.getByRole("button", { name: "Фотографии" }));
+    const insertButton = await screen.findByRole("button", {
+      name: `Добавить ${personalPhoto.title} в PowerPoint`
+    });
+    fireEvent.click(insertButton);
+
+    expect(insertPersonalAsset).toHaveBeenCalledWith(personalPhoto);
+    expect(
+      screen.getByRole("button", {
+        name: `Добавляем ${personalPhoto.title} в PowerPoint`
+      })
+    ).toBeDisabled();
+
+    await act(async () => {
+      insertion.resolve(undefined);
+      await insertion.promise;
+    });
+
+    expect(
+      await screen.findByText("Фотография добавлена на текущий слайд.")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: `Добавить ${personalPhoto.title} в PowerPoint`
+      })
+    ).toBeEnabled();
+  });
+
+  it("explains why personal assets cannot be inserted in browser mode", async () => {
+    const api = createApi();
+    api.listPersonalAssets = vi.fn(async () => ({
+      items: [personalPhoto],
+      total: 1
+    }));
+
+    render(<App api={api} powerPointService={new BrowserPowerPointService()} />);
+
+    await screen.findByText(revenueSlide.title);
+    fireEvent.click(screen.getByRole("button", { name: "Личное" }));
+    fireEvent.click(screen.getByRole("button", { name: "Фотографии" }));
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: `Добавить ${personalPhoto.title} в PowerPoint`
+      })
+    );
+
+    const notification = await screen.findByRole("status");
+    expect(within(notification).getByText(BROWSER_POWERPOINT_MESSAGE)).toBeInTheDocument();
   });
 
   it("shows an accessible loading state until the catalog request completes", async () => {

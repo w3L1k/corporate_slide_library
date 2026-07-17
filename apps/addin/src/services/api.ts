@@ -26,6 +26,7 @@ export interface SlideLibraryApi {
     file: File,
     signal?: AbortSignal
   ): Promise<PersonalAsset>;
+  downloadPersonalAsset(id: string, signal?: AbortSignal): Promise<ArrayBuffer>;
   getPersonalAssetFileUrl(id: string): string;
 }
 
@@ -221,6 +222,20 @@ export class HttpSlideLibraryApi implements SlideLibraryApi {
       })
     );
     return (await response.json()) as PersonalAsset;
+  }
+
+  async downloadPersonalAsset(id: string, signal?: AbortSignal): Promise<ArrayBuffer> {
+    const response = await requireOk(
+      await this.fetchImplementation(
+        `${this.baseUrl}/personal-assets/${encodeURIComponent(id)}/file`,
+        {
+          method: "GET",
+          headers: { Accept: "*/*" },
+          ...(signal ? { signal } : {})
+        }
+      )
+    );
+    return response.arrayBuffer();
   }
 
   getPersonalAssetFileUrl(id: string): string {

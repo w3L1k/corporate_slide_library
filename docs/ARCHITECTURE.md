@@ -69,9 +69,9 @@ The Vite development server is the HTTPS origin consumed by the task pane. It pr
 | Component | Responsibility | Deliberately does not own |
 | --- | --- | --- |
 | `apps/addin` | Task-pane UX, filter state, API requests, insertion orchestration, user-facing states | Filesystem paths, catalog validation, server credentials |
-| `HttpSlideLibraryApi` | Typed request URLs, response/error handling, deferred PPTX download | Office.js and local storage |
-| `PowerPointService` | A narrow capability boundary for insertion | Search, filtering, catalog storage |
-| `OfficePowerPointService` | Download, chunk-safe Base64 conversion, `PowerPoint.run`, `insertSlidesFromBase64`, `context.sync` | Browser fallback behavior and content ingestion |
+| `HttpSlideLibraryApi` | Typed request URLs, response/error handling, deferred public and personal binary download | Office.js and local storage |
+| `PowerPointService` | A narrow capability boundary for slide and visual-asset insertion | Search, filtering, catalog storage |
+| `OfficePowerPointService` | PPTX insertion through `PowerPoint.run`; raster/SVG insertion through Office selection coercion | Browser fallback behavior and content ingestion |
 | `BrowserPowerPointService` | Explicit unavailable reason and a non-fake insertion error | Any Office call |
 | `apps/server` | HTTP contract, filtering, CORS, headers, error mapping, structured request logs | UI state and Office host calls |
 | `SlideStorage` | Catalog/item/binary lookup and refresh contract | HTTP-specific behavior |
@@ -90,6 +90,9 @@ The API surface is ID-based:
 | `GET /api/slides/:id` | Returns one registered item's metadata. |
 | `GET /api/slides/:id/preview` | Reads the item's registered image and sends its image content type. |
 | `GET /api/slides/:id/file` | Reads the item's registered PPTX with the Open XML presentation content type. |
+| `GET /api/personal-assets` | Returns locally registered personal PPTX, photo, and logo metadata. |
+| `POST /api/personal-assets` | Validates and stores one uploaded personal asset under a server-generated ID. |
+| `GET /api/personal-assets/:id/file` | Sends only the binary registered for the supplied personal-asset ID. |
 | `POST /api/admin/reindex` | Exists only when `ENABLE_ADMIN_REINDEX=true`; force-refreshes the in-process catalog cache. |
 
 Search is an in-memory normalized substring match across title, description, category, tags, and optional `searchText`. Category comparison is case-insensitive equality. Status must be one of the three shared enum values. There is no pagination in the MVP.
@@ -134,7 +137,7 @@ The storage adapter keeps metadata and an ID map in memory. Before catalog acces
 
 ## Office boundary and insertion flow
 
-The factory first verifies that both Office and PowerPoint globals exist, waits briefly for `Office.onReady()`, confirms the PowerPoint host, and checks `Office.context.requirements.isSetSupported("PowerPointApi", "1.2")`. If any host capability is unavailable, it returns `BrowserPowerPointService` with an actionable reason.
+The factory first verifies that both Office and PowerPoint globals exist, waits briefly for `Office.onReady()`, confirms the PowerPoint host, and checks `Office.context.requirements.isSetSupported("PowerPointApi", "1.2")`. If the core slide-insertion capability is unavailable, it returns `BrowserPowerPointService` with an actionable reason. Image insertion is detected independently through `ImageCoercion 1.1`; SVG insertion additionally requires `ImageCoercion 1.2`, so an older compatible host can still insert PPTX slides.
 
 The XML manifest also declares `PowerPointApi 1.2`. Microsoft lists `insertSlidesFromBase64` in that requirement set; availability depends on the PowerPoint platform and build. See the official [`Presentation.insertSlidesFromBase64` reference](https://learn.microsoft.com/en-us/javascript/api/powerpoint/powerpoint.presentation), [PowerPoint requirement-set matrix](https://learn.microsoft.com/en-us/javascript/api/requirement-sets/powerpoint/powerpoint-api-requirement-sets), and [runtime requirement checks](https://learn.microsoft.com/en-us/office/dev/add-ins/develop/specify-api-requirements-runtime).
 
@@ -161,6 +164,8 @@ sequenceDiagram
 ```
 
 The service does not provide `sourceSlideIds`, so PowerPoint inserts every slide in the source file; the one-slide content invariant is therefore important. It does not provide `targetSlideId`, so the API's default placement applies (the beginning of the target presentation). It explicitly requests `KeepSourceFormatting`.
+
+Personal PPTX files reuse the same Base64 insertion path. Raster photos and logos are downloaded only after the user presses **Добавить**, converted to Base64, and passed to `Office.context.document.setSelectedDataAsync` with image coercion. Sanitized SVG logos are passed as XML with `XmlSvg` coercion. PowerPoint places the visual on the active slide or into a suitable selected placeholder according to the host's selection behavior.
 
 ## Content update flow
 

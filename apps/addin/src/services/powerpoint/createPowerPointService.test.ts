@@ -1,18 +1,30 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { PersonalAsset } from "@slide-library/shared";
 import type { SlideLibraryApi } from "../api";
 import { BrowserPowerPointService } from "./BrowserPowerPointService";
 import { createPowerPointService, type OfficeRuntime } from "./createPowerPointService";
 import { OfficePowerPointService, type PowerPointRuntime } from "./OfficePowerPointService";
 import { BROWSER_POWERPOINT_MESSAGE, PowerPointUnavailableError } from "./types";
 
-const api: Pick<SlideLibraryApi, "downloadSlide"> = {
-  downloadSlide: vi.fn(async () => new ArrayBuffer(0))
+const api: Pick<SlideLibraryApi, "downloadSlide" | "downloadPersonalAsset"> = {
+  downloadSlide: vi.fn(async () => new ArrayBuffer(0)),
+  downloadPersonalAsset: vi.fn(async () => new ArrayBuffer(0))
 };
 
 const unusedPowerPointRuntime: PowerPointRuntime = {
   run<T>(): Promise<T> {
     return Promise.reject(new Error("PowerPoint.run was not expected in this test."));
   }
+};
+
+const personalPhoto: PersonalAsset = {
+  id: "11111111-1111-4111-8111-111111111111",
+  title: "Team photo",
+  kind: "photo",
+  fileName: "team.png",
+  mimeType: "image/png",
+  size: 1,
+  createdAt: "2026-07-17T10:00:00.000Z"
 };
 
 const createOfficeRuntime = (host: string, supported: boolean): OfficeRuntime => ({
@@ -116,6 +128,39 @@ describe("createPowerPointService", () => {
     expect(service).toBeInstanceOf(OfficePowerPointService);
     expect(service.isAvailable()).toBe(true);
     expect(service.getUnavailableReason()).toBeNull();
+  });
+
+  it("connects personal image insertion to Office selection coercion", async () => {
+    const setSelectedDataAsync = vi.fn(
+      (
+        _data: string,
+        _options: { coercionType: "image" | "xmlSvg" },
+        callback: (result: { status: unknown }) => void
+      ) => callback({ status: "succeeded" })
+    );
+    const office: OfficeRuntime = {
+      onReady: vi.fn(async () => ({ host: "PowerPoint" })),
+      AsyncResultStatus: { Succeeded: "succeeded" },
+      context: {
+        requirements: {
+          isSetSupported: vi.fn(() => true)
+        },
+        document: { setSelectedDataAsync }
+      }
+    };
+
+    const service = await createPowerPointService(api, {
+      office,
+      powerPoint: unusedPowerPointRuntime
+    });
+    await service.insertPersonalAsset(personalPhoto);
+
+    expect(api.downloadPersonalAsset).toHaveBeenCalledWith(personalPhoto.id);
+    expect(setSelectedDataAsync).toHaveBeenCalledWith(
+      "",
+      { coercionType: "image" },
+      expect.any(Function)
+    );
   });
 
   it("treats missing requirement detection as incompatible", async () => {

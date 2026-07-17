@@ -1,3 +1,4 @@
+import type { PersonalAsset } from "@slide-library/shared";
 import {
   BROWSER_POWERPOINT_MESSAGE,
   PowerPointUnavailableError,
@@ -26,6 +27,11 @@ export class BrowserPowerPointService implements PowerPointService {
 
   async insertSlides(slideIds: readonly string[]): Promise<void> {
     void slideIds;
+    throw new PowerPointUnavailableError(this.unavailableMessage);
+  }
+
+  async insertPersonalAsset(asset: PersonalAsset): Promise<void> {
+    void asset;
     throw new PowerPointUnavailableError(this.unavailableMessage);
   }
 }
