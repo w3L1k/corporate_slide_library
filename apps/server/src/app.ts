@@ -247,7 +247,7 @@ export function createApp(options: CreateAppOptions): express.Express {
         }
         callback(new ApiError(403, "CORS_NOT_ALLOWED", "This origin is not allowed"));
       },
-      methods: ["GET", "POST", "OPTIONS"],
+      methods: ["GET", "POST", "DELETE", "OPTIONS"],
       optionsSuccessStatus: 204
     })
   );
@@ -327,6 +327,19 @@ export function createApp(options: CreateAppOptions): express.Express {
           response.setHeader("Content-Security-Policy", "default-src 'none'; sandbox");
         }
         response.send(asset.data);
+      })
+    );
+
+    app.delete(
+      "/api/personal-assets/:id",
+      asyncRoute(async (request, response) => {
+        const id = requirePersonalAssetId(request);
+        const removed = await personalAssetStorage.remove(id);
+        if (!removed) {
+          throw new ApiError(404, "PERSONAL_ASSET_NOT_FOUND", "Personal asset was not found");
+        }
+
+        response.status(204).send();
       })
     );
   }

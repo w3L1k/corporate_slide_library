@@ -33,6 +33,12 @@ export interface PersonalAssetFile {
   data: Buffer;
 }
 
+const hasErrorCode = (error: unknown, code: string): boolean =>
+  typeof error === "object" &&
+  error !== null &&
+  "code" in error &&
+  error.code === code;
+
 const toPublicItem = (record: PersonalAssetRecord): PersonalAsset =>
   PersonalAssetSchema.parse({
     id: record.id,
@@ -134,6 +140,61 @@ export class PersonalAssetStorage {
     }
 
     return { item: toPublicItem(record), data: await readFile(realAsset) };
+  }
+
+  async remove(id: string): Promise<PersonalAsset | undefined> {
+    let removedItem: PersonalAsset | undefined;
+
+    await this.enqueueWrite(async () => {
+      const records = await this.readCatalog();
+      const recordIndex = records.findIndex((item) => item.id === id);
+      if (recordIndex < 0) {
+        return;
+      }
+
+      const record = records[recordIndex]!;
+      const assetPath = resolveContainedPath(this.rootPath, record.storedFile);
+      const temporaryPath = resolveContainedPath(
+        this.filesPath,
+        `.delete-${randomUUID()}.tmp`
+      );
+      let movedFile = false;
+
+      try {
+        const [realRoot, realAsset, assetStat] = await Promise.all([
+          realpath(this.rootPath),
+          realpath(assetPath),
+          stat(assetPath)
+        ]);
+        if (!assetStat.isFile() || !isPathInside(realRoot, realAsset)) {
+          throw new Error("Registered personal asset is outside the personal library");
+        }
+
+        await rename(assetPath, temporaryPath);
+        movedFile = true;
+      } catch (error) {
+        if (!hasErrorCode(error, "ENOENT")) {
+          throw error;
+        }
+      }
+
+      const nextRecords = records.filter((_, index) => index !== recordIndex);
+      try {
+        await this.writeCatalog(nextRecords);
+      } catch (error) {
+        if (movedFile) {
+          await rename(temporaryPath, assetPath);
+        }
+        throw error;
+      }
+
+      if (movedFile) {
+        await rm(temporaryPath, { force: true });
+      }
+      removedItem = toPublicItem(record);
+    });
+
+    return removedItem;
   }
 
   private async readCatalog(): Promise<PersonalAssetRecord[]> {

@@ -27,6 +27,7 @@ export interface SlideLibraryApi {
     signal?: AbortSignal
   ): Promise<PersonalAsset>;
   downloadPersonalAsset(id: string, signal?: AbortSignal): Promise<ArrayBuffer>;
+  deletePersonalAsset(id: string, signal?: AbortSignal): Promise<void>;
   getPersonalAssetFileUrl(id: string): string;
 }
 
@@ -236,6 +237,18 @@ export class HttpSlideLibraryApi implements SlideLibraryApi {
       )
     );
     return response.arrayBuffer();
+  }
+
+  async deletePersonalAsset(id: string, signal?: AbortSignal): Promise<void> {
+    await requireOk(
+      await this.fetchImplementation(
+        `${this.baseUrl}/personal-assets/${encodeURIComponent(id)}`,
+        {
+          method: "DELETE",
+          ...(signal ? { signal } : {})
+        }
+      )
+    );
   }
 
   getPersonalAssetFileUrl(id: string): string {

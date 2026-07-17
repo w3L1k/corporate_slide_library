@@ -52,6 +52,7 @@ The current state is tracked in [FINAL_CHECKLIST.md](FINAL_CHECKLIST.md).
 - The supplied manifest and icons point to `https://localhost:3000` and use a trusted development certificate. This is a development/sideload package, not a centrally deployable production manifest.
 - Network-share sideloading is a Windows test mechanism, not a production distribution strategy. A pilot needs a real HTTPS origin and managed add-in deployment.
 - There is no malware scanning, data-loss prevention integration, audit retention policy, rate limiting, or tenant-level compliance control.
+- Personal asset deletion is permanent: the local MVP has no recycle bin, retention policy, or version history.
 
 ### PowerPoint behavior
 

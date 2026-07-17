@@ -63,6 +63,8 @@ export function PersonalLibrary({
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [insertingId, setInsertingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -128,7 +130,7 @@ export function PersonalLibrary({
   };
 
   const insertAsset = async (item: PersonalAsset): Promise<void> => {
-    if (insertingId !== null) {
+    if (insertingId !== null || deletingId !== null) {
       return;
     }
 
@@ -150,6 +152,30 @@ export function PersonalLibrary({
       });
     } finally {
       setInsertingId(null);
+    }
+  };
+
+  const deleteAsset = async (item: PersonalAsset): Promise<void> => {
+    if (deletingId !== null || insertingId !== null) {
+      return;
+    }
+
+    setDeletingId(item.id);
+    try {
+      await api.deletePersonalAsset(item.id);
+      setItems((current) => current.filter((candidate) => candidate.id !== item.id));
+      setConfirmingDeleteId(null);
+      onNotify({ kind: "success", text: "Материал удалён из личной библиотеки." });
+    } catch (deletionError: unknown) {
+      if (import.meta.env.DEV) {
+        console.error("Personal asset deletion failed", deletionError);
+      }
+      onNotify({
+        kind: "error",
+        text: `Не удалось удалить материал. ${getErrorMessage(deletionError)}`
+      });
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -252,26 +278,84 @@ export function PersonalLibrary({
                 <strong>{item.title}</strong>
                 <span>{item.fileName}</span>
                 <small>{formatFileSize(item.size)}</small>
-                <button
-                  className="button button--primary personal-card__action"
-                  type="button"
-                  onClick={() => void insertAsset(item)}
-                  disabled={insertingId !== null}
-                  aria-label={
-                    insertingId === item.id
-                      ? `Добавляем ${item.title} в PowerPoint`
-                      : `Добавить ${item.title} в PowerPoint`
-                  }
+                {confirmingDeleteId === item.id ? (
+                  <span className="personal-card__confirmation">Удалить материал?</span>
+                ) : null}
+                <div
+                  className={`personal-card__actions ${
+                    confirmingDeleteId === item.id
+                      ? "personal-card__actions--confirm"
+                      : ""
+                  }`}
                 >
-                  {insertingId === item.id ? (
+                  {confirmingDeleteId === item.id ? (
                     <>
-                      <span className="spinner" aria-hidden="true" />
-                      Добавляем…
+                      <button
+                        className="button button--secondary"
+                        type="button"
+                        onClick={() => setConfirmingDeleteId(null)}
+                        disabled={deletingId !== null}
+                      >
+                        Отмена
+                      </button>
+                      <button
+                        className="button button--danger"
+                        type="button"
+                        onClick={() => void deleteAsset(item)}
+                        disabled={deletingId !== null}
+                        aria-label={
+                          deletingId === item.id
+                            ? `Удаляем ${item.title}`
+                            : `Подтвердить удаление ${item.title}`
+                        }
+                      >
+                        {deletingId === item.id ? (
+                          <>
+                            <span className="spinner" aria-hidden="true" />
+                            Удаляем…
+                          </>
+                        ) : (
+                          "Удалить"
+                        )}
+                      </button>
                     </>
                   ) : (
-                    "Добавить"
+                    <>
+                      <button
+                        className="button button--primary personal-card__action"
+                        type="button"
+                        onClick={() => void insertAsset(item)}
+                        disabled={insertingId !== null || deletingId !== null}
+                        aria-label={
+                          insertingId === item.id
+                            ? `Добавляем ${item.title} в PowerPoint`
+                            : `Добавить ${item.title} в PowerPoint`
+                        }
+                      >
+                        {insertingId === item.id ? (
+                          <>
+                            <span className="spinner" aria-hidden="true" />
+                            Добавляем…
+                          </>
+                        ) : (
+                          "Добавить"
+                        )}
+                      </button>
+                      <button
+                        className="button button--secondary personal-card__delete"
+                        type="button"
+                        onClick={() => setConfirmingDeleteId(item.id)}
+                        disabled={insertingId !== null || deletingId !== null}
+                        aria-label={`Удалить ${item.title} из личной библиотеки`}
+                        title="Удалить"
+                      >
+                        <svg viewBox="0 0 20 20" aria-hidden="true">
+                          <path d="M4.5 6h11M8 3.5h4M6.2 6l.7 10h6.2l.7-10M8.3 9v4.5M11.7 9v4.5" />
+                        </svg>
+                      </button>
+                    </>
                   )}
-                </button>
+                </div>
               </div>
             </article>
           ))}

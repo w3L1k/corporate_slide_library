@@ -29,6 +29,7 @@ Checked items are present in the repository or were verified by direct static/pa
 
 - [x] Health, list, item, preview, and PPTX endpoints are implemented.
 - [x] Personal asset list, upload, and registered-ID binary endpoints are implemented.
+- [x] Personal deletion accepts only a validated registered UUID and removes both metadata and binary.
 - [x] List API combines text, category, and status filters and returns total plus available categories.
 - [x] Search covers title, description, category, tags, and optional `searchText`.
 - [x] Unknown/invalid IDs and missing assets return stable friendly API errors.
@@ -51,6 +52,7 @@ Checked items are present in the repository or were verified by direct static/pa
 - [x] Loading skeleton, API error/retry, empty-catalog, filtered-no-results, and preview-placeholder states are implemented.
 - [x] Insertion disables competing insert controls and reports progress, success, unavailable host, and failure.
 - [x] Personal PPTX, photo, and logo cards expose insertion controls with progress and browser fallback states.
+- [x] Personal cards require an explicit confirmation before deletion and support cancellation.
 - [x] Browser mode uses an explicit catalog-preview notice and never fakes insertion.
 - [x] React UI and service automated tests are present.
 - [ ] `npm run dev:browser` has been manually smoke-tested in the final revision with no unexpected console/network error.
@@ -81,9 +83,9 @@ Checked items are present in the repository or were verified by direct static/pa
 - [x] `npm run validate-library` passes against all 12 final demo items.
 - [x] `npm run lint` passes in the final revision.
 - [x] `npm run typecheck` passes in the final revision, including tools.
-- [x] `npm run test` passes: 52 server tests and 35 add-in tests.
+- [x] `npm run test` passes: 53 server tests and 37 add-in tests.
 - [x] `npm run build` passes in the final revision.
-- [x] The aggregate `npm run check` passes: library validation, manifest validation, lint (0 errors), typecheck, 87 tests (52 server + 35 add-in), builds.
+- [x] The aggregate `npm run check` passes: library validation, manifest validation, lint (0 errors), typecheck, 90 tests (53 server + 37 add-in), builds.
 - [x] `npm audit` reports 0 known vulnerabilities for the installed dependency tree.
 
 ## Pilot readiness boundary

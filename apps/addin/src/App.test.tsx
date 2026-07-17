@@ -163,6 +163,49 @@ describe("Slide Library application", () => {
     expect(within(notification).getByText(BROWSER_POWERPOINT_MESSAGE)).toBeInTheDocument();
   });
 
+  it("requires confirmation and removes a personal asset from the library", async () => {
+    const api = createApi();
+    api.listPersonalAssets = vi.fn(async () => ({
+      items: [personalPhoto],
+      total: 1
+    }));
+
+    render(<App api={api} powerPointService={createAvailablePowerPointService()} />);
+
+    await screen.findByText(revenueSlide.title);
+    fireEvent.click(screen.getByRole("button", { name: "Личное" }));
+    fireEvent.click(screen.getByRole("button", { name: "Фотографии" }));
+    await screen.findByText(personalPhoto.title);
+
+    const startDeletion = screen.getByRole("button", {
+      name: `Удалить ${personalPhoto.title} из личной библиотеки`
+    });
+    fireEvent.click(startDeletion);
+    expect(screen.getByText("Удалить материал?")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Отмена" }));
+    expect(screen.queryByText("Удалить материал?")).not.toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: `Удалить ${personalPhoto.title} из личной библиотеки`
+      })
+    );
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: `Подтвердить удаление ${personalPhoto.title}`
+      })
+    );
+
+    await waitFor(() =>
+      expect(api.deletePersonalAsset).toHaveBeenCalledWith(personalPhoto.id)
+    );
+    expect(screen.queryByText(personalPhoto.title)).not.toBeInTheDocument();
+    expect(
+      await screen.findByText("Материал удалён из личной библиотеки.")
+    ).toBeInTheDocument();
+  });
+
   it("shows an accessible loading state until the catalog request completes", async () => {
     const catalog = createDeferred<SlideListResponse>();
     const api = createApi(() => catalog.promise);

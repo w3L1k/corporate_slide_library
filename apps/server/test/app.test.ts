@@ -1,5 +1,5 @@
 import type { SlideLibraryItem } from "@slide-library/shared";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import request from "supertest";
@@ -266,6 +266,31 @@ describe("slide catalog API", () => {
     expect(Buffer.from(file.body).subarray(0, 8)).toEqual(
       Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
     );
+
+    await request(app).delete(`/api/personal-assets/${photo.body.id}`).expect(204);
+    const listAfterDelete = await request(app).get("/api/personal-assets").expect(200);
+    expect(listAfterDelete.body.total).toBe(2);
+    expect(
+      listAfterDelete.body.items.map((item: { id: string }) => item.id)
+    ).not.toContain(photo.body.id);
+    await request(app)
+      .get(`/api/personal-assets/${photo.body.id}/file`)
+      .expect(404);
+    expect(
+      await readdir(path.join(libraryPath, "personal-assets", "files"))
+    ).not.toContainEqual(expect.stringContaining(photo.body.id));
+  });
+
+  it("rejects invalid or unregistered personal asset deletion IDs", async () => {
+    const invalid = await request(app)
+      .delete("/api/personal-assets/not-a-uuid")
+      .expect(400);
+    expect(invalid.body.error.code).toBe("INVALID_PERSONAL_ASSET_ID");
+
+    const missing = await request(app)
+      .delete("/api/personal-assets/11111111-1111-4111-8111-111111111111")
+      .expect(404);
+    expect(missing.body.error.code).toBe("PERSONAL_ASSET_NOT_FOUND");
   });
 
   it("rejects unsupported or unsafe personal uploads", async () => {
@@ -362,10 +387,11 @@ describe("slide catalog API", () => {
 
   it("handles allowed and denied CORS preflight requests", async () => {
     await request(app)
-      .options("/api/slides")
+      .options("/api/personal-assets/11111111-1111-4111-8111-111111111111")
       .set("Origin", "http://localhost:3000")
-      .set("Access-Control-Request-Method", "GET")
+      .set("Access-Control-Request-Method", "DELETE")
       .expect("Access-Control-Allow-Origin", "http://localhost:3000")
+      .expect("Access-Control-Allow-Methods", /DELETE/)
       .expect(204);
 
     const deniedResponse = await request(app)

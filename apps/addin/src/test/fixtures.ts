@@ -59,6 +59,7 @@ export const createApi = (
     createdAt: "2026-07-17T10:00:00.000Z"
   })),
   downloadPersonalAsset: vi.fn(async () => new ArrayBuffer(0)),
+  deletePersonalAsset: vi.fn(async () => undefined),
   getPersonalAssetFileUrl: vi.fn(
     (id: string) => `/api/personal-assets/${encodeURIComponent(id)}/file`
   )
