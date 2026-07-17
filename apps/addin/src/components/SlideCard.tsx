@@ -8,8 +8,10 @@ interface SlideCardProps {
   previewUrl: string;
   inserting: boolean;
   insertionBlocked: boolean;
+  favorite: boolean;
   onOpen(): void;
   onInsert(): void;
+  onToggleFavorite(): void;
 }
 
 export function SlideCard({
@@ -17,11 +19,27 @@ export function SlideCard({
   previewUrl,
   inserting,
   insertionBlocked,
+  favorite,
   onOpen,
-  onInsert
+  onInsert,
+  onToggleFavorite
 }: SlideCardProps) {
   return (
     <article className="slide-card" aria-labelledby={`slide-${item.id}-title`}>
+      <button
+        className="slide-card__favorite"
+        type="button"
+        onClick={onToggleFavorite}
+        aria-label={`${favorite ? "Remove" : "Add"} ${item.title} ${
+          favorite ? "from" : "to"
+        } favorites`}
+        aria-pressed={favorite}
+        title={favorite ? "Убрать из избранного" : "Добавить в избранное"}
+      >
+        <svg viewBox="0 0 20 20" aria-hidden="true">
+          <path d="M10 17s-6-3.7-6-8.3a3.5 3.5 0 016-2.3 3.5 3.5 0 016 2.3C16 13.3 10 17 10 17z" />
+        </svg>
+      </button>
       <button
         className="slide-card__preview"
         type="button"

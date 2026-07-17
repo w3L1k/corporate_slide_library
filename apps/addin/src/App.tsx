@@ -5,6 +5,7 @@ import { SlideCard } from "./components/SlideCard";
 import { SlideDetailsDialog } from "./components/SlideDetailsDialog";
 import { Toast, type ToastMessage } from "./components/Toast";
 import { useDebouncedValue } from "./hooks/useDebouncedValue";
+import { useFavorites } from "./hooks/useFavorites";
 import {
   slideLibraryApi,
   type SlideLibraryApi,
@@ -69,6 +70,7 @@ export function App({
   const [selectedSlide, setSelectedSlide] = useState<SlideLibraryItem | null>(null);
   const [insertingId, setInsertingId] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastMessage | null>(null);
+  const { favoriteIds, toggleFavorite } = useFavorites();
   const powerPointUnavailableReason = powerPointService.getUnavailableReason();
 
   useEffect(() => {
@@ -179,6 +181,10 @@ export function App({
         new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime()
     );
   }, [catalog.response?.items, sortOrder]);
+  const favoriteItems = useMemo(
+    () => visibleItems.filter((item) => favoriteIds.has(item.id)),
+    [favoriteIds, visibleItems]
+  );
 
   return (
     <div className="app-shell">
@@ -438,7 +444,7 @@ export function App({
           aria-label="Slide catalog"
           aria-busy={activeSection === "presentations" && catalog.loading}
         >
-          {activeSection === "favorites" ? (
+          {activeSection === "favorites" && favoriteItems.length === 0 ? (
             <div className="state-panel">
               <span className="state-panel__icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24">
@@ -454,6 +460,24 @@ export function App({
               >
                 Открыть презентации
               </button>
+            </div>
+          ) : null}
+
+          {activeSection === "favorites" && favoriteItems.length > 0 ? (
+            <div className={`slide-grid slide-grid--${viewMode}`}>
+              {favoriteItems.map((item) => (
+                <SlideCard
+                  key={item.id}
+                  item={item}
+                  previewUrl={api.getPreviewUrl(item.id)}
+                  inserting={insertingId === item.id}
+                  insertionBlocked={insertingId !== null}
+                  favorite
+                  onToggleFavorite={() => toggleFavorite(item.id)}
+                  onOpen={() => setSelectedSlide(item)}
+                  onInsert={() => void insertSlide(item)}
+                />
+              ))}
             </div>
           ) : null}
 
@@ -517,6 +541,8 @@ export function App({
                   previewUrl={api.getPreviewUrl(item.id)}
                   inserting={insertingId === item.id}
                   insertionBlocked={insertingId !== null}
+                  favorite={favoriteIds.has(item.id)}
+                  onToggleFavorite={() => toggleFavorite(item.id)}
                   onOpen={() => setSelectedSlide(item)}
                   onInsert={() => void insertSlide(item)}
                 />

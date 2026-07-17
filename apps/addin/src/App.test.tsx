@@ -29,6 +29,27 @@ describe("Slide Library application", () => {
     expect(screen.getByText(revenueSlide.title)).toBeInTheDocument();
   });
 
+  it("adds and removes a slide from persistent favorites", async () => {
+    render(<App api={createApi()} powerPointService={createAvailablePowerPointService()} />);
+
+    await screen.findByText(revenueSlide.title);
+    fireEvent.click(
+      screen.getByRole("button", { name: `Add ${revenueSlide.title} to favorites` })
+    );
+
+    expect(globalThis.localStorage.getItem("slidebrary.favorite-slide-ids")).toContain(
+      revenueSlide.id
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Избранное" }));
+    expect(screen.getByText(revenueSlide.title)).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: `Remove ${revenueSlide.title} from favorites` })
+    );
+    expect(screen.getByRole("heading", { name: "Избранное пока пусто" })).toBeInTheDocument();
+  });
+
   it("shows an accessible loading state until the catalog request completes", async () => {
     const catalog = createDeferred<SlideListResponse>();
     const api = createApi(() => catalog.promise);
