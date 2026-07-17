@@ -78,6 +78,37 @@ export interface ReindexResponse {
   refreshedAt: string;
 }
 
+export const personalAssetKindValues = ["presentation", "photo", "logo"] as const;
+export const PersonalAssetKindSchema = z.enum(personalAssetKindValues);
+export type PersonalAssetKind = z.infer<typeof PersonalAssetKindSchema>;
+
+export const PersonalAssetSchema = z
+  .object({
+    id: z.uuid(),
+    title: z.string().trim().min(1).max(120),
+    kind: PersonalAssetKindSchema,
+    fileName: z.string().trim().min(1).max(180),
+    mimeType: z.string().trim().min(1).max(120),
+    size: z.number().int().positive().max(20 * 1024 * 1024),
+    createdAt: z.iso.datetime({ offset: true })
+  })
+  .strict();
+
+export type PersonalAsset = z.infer<typeof PersonalAssetSchema>;
+
+export const PersonalAssetRecordSchema = PersonalAssetSchema.extend({
+  storedFile: relativeAssetPath
+}).strict();
+
+export type PersonalAssetRecord = z.infer<typeof PersonalAssetRecordSchema>;
+
+export const PersonalAssetCatalogSchema = z.array(PersonalAssetRecordSchema);
+
+export interface PersonalAssetListResponse {
+  items: PersonalAsset[];
+  total: number;
+}
+
 export interface LibraryValidationIssue {
   itemId?: string;
   path?: string;

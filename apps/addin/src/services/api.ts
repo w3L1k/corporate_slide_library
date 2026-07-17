@@ -1,5 +1,8 @@
 import type {
   ApiErrorResponse,
+  PersonalAsset,
+  PersonalAssetKind,
+  PersonalAssetListResponse,
   SlideLibraryItem,
   SlideListResponse,
   SlideStatus
@@ -16,6 +19,14 @@ export interface SlideLibraryApi {
   getSlide(id: string, signal?: AbortSignal): Promise<SlideLibraryItem>;
   downloadSlide(id: string, signal?: AbortSignal): Promise<ArrayBuffer>;
   getPreviewUrl(id: string): string;
+  listPersonalAssets(signal?: AbortSignal): Promise<PersonalAssetListResponse>;
+  uploadPersonalAsset(
+    kind: PersonalAssetKind,
+    title: string,
+    file: File,
+    signal?: AbortSignal
+  ): Promise<PersonalAsset>;
+  getPersonalAssetFileUrl(id: string): string;
 }
 
 export class ApiError extends Error {
@@ -95,6 +106,14 @@ const isSlideListResponse = (value: unknown): value is SlideListResponse => {
   );
 };
 
+const isPersonalAssetListResponse = (value: unknown): value is PersonalAssetListResponse =>
+  typeof value === "object" &&
+  value !== null &&
+  "items" in value &&
+  Array.isArray(value.items) &&
+  "total" in value &&
+  typeof value.total === "number";
+
 export class HttpSlideLibraryApi implements SlideLibraryApi {
   private readonly baseUrl: string;
   private readonly fetchImplementation: FetchImplementation;
@@ -166,6 +185,46 @@ export class HttpSlideLibraryApi implements SlideLibraryApi {
 
   getPreviewUrl(id: string): string {
     return `${this.baseUrl}/slides/${encodeURIComponent(id)}/preview`;
+  }
+
+  async listPersonalAssets(signal?: AbortSignal): Promise<PersonalAssetListResponse> {
+    const response = await requireOk(
+      await this.fetchImplementation(`${this.baseUrl}/personal-assets`, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+        ...(signal ? { signal } : {})
+      })
+    );
+    const payload: unknown = await response.json();
+    if (!isPersonalAssetListResponse(payload)) {
+      throw new ApiError("The personal library returned an invalid response.", response.status);
+    }
+    return payload;
+  }
+
+  async uploadPersonalAsset(
+    kind: PersonalAssetKind,
+    title: string,
+    file: File,
+    signal?: AbortSignal
+  ): Promise<PersonalAsset> {
+    const formData = new FormData();
+    formData.set("kind", kind);
+    formData.set("title", title);
+    formData.set("file", file);
+
+    const response = await requireOk(
+      await this.fetchImplementation(`${this.baseUrl}/personal-assets`, {
+        method: "POST",
+        body: formData,
+        ...(signal ? { signal } : {})
+      })
+    );
+    return (await response.json()) as PersonalAsset;
+  }
+
+  getPersonalAssetFileUrl(id: string): string {
+    return `${this.baseUrl}/personal-assets/${encodeURIComponent(id)}/file`;
   }
 }
 

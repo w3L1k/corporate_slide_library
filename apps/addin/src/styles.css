@@ -336,6 +336,173 @@ main {
   min-width: 0;
 }
 
+.personal-library {
+  min-width: 0;
+}
+
+.personal-library__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.personal-library__header h2,
+.personal-library__header p {
+  margin: 0;
+}
+
+.personal-library__header h2 {
+  margin-top: 3px;
+  font-size: 20px;
+}
+
+.personal-library__header p {
+  margin-top: 4px;
+  color: var(--ink-muted);
+  font-size: 11.5px;
+}
+
+.upload-panel {
+  display: grid;
+  grid-template-columns: minmax(100px, 0.8fr) minmax(150px, 1fr) minmax(170px, 1.2fr) auto;
+  align-items: end;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.upload-panel__intro {
+  display: flex;
+  min-height: 52px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+}
+
+.upload-panel__intro strong {
+  font-size: 12px;
+}
+
+.upload-panel__intro span {
+  color: var(--ink-muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.upload-panel label {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--ink-muted);
+  font-size: 10.5px;
+  font-weight: 650;
+}
+
+.upload-panel input:not([type="file"]),
+.file-picker__surface {
+  width: 100%;
+  height: 38px;
+  padding: 0 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  color: var(--ink);
+  background: #fafbfc;
+  font-size: 11.5px;
+  font-weight: 400;
+  line-height: 36px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-picker {
+  position: relative;
+  cursor: pointer;
+}
+
+.file-picker input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.file-picker__surface {
+  color: #526175;
+  border-style: dashed;
+}
+
+.personal-library__message {
+  margin: 24px 0;
+  color: var(--ink-muted);
+  text-align: center;
+}
+
+.personal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.personal-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.personal-card__preview {
+  display: grid;
+  aspect-ratio: 16 / 9;
+  place-items: center;
+  overflow: hidden;
+  color: #5268df;
+  background: linear-gradient(145deg, #eef1ff, #f7f8fc);
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.personal-card__preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.personal-card__body {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px;
+}
+
+.personal-card__body strong,
+.personal-card__body span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.personal-card__body strong {
+  font-size: 12px;
+}
+
+.personal-card__body span,
+.personal-card__body small {
+  color: var(--ink-muted);
+  font-size: 10px;
+}
+
 .environment-notice {
   display: flex;
   align-items: flex-start;
@@ -1412,18 +1579,54 @@ main {
 
 @media (max-width: 560px) {
   .app-header {
-    min-height: 70px;
-    padding: 12px 13px;
+    min-height: 52px;
+    padding: 8px 10px;
   }
 
-  .brand__mark {
-    width: 37px;
-    height: 37px;
-    border-radius: 10px;
+  .header-status {
+    display: none;
   }
 
   main {
-    padding: 12px 10px 28px;
+    padding: 0 8px 24px;
+  }
+
+  .scope-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-left: 112px;
+  }
+
+  .workspace-layout {
+    grid-template-columns: 112px minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .library-sidebar {
+    grid-template-columns: 18px minmax(0, 1fr);
+  }
+
+  .library-sidebar__menu {
+    padding-right: 5px;
+  }
+
+  .library-sidebar__item {
+    grid-template-columns: 21px minmax(0, 1fr);
+    padding: 0 4px;
+    font-size: 9.5px;
+  }
+
+  .upload-panel {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .selection-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .selection-toolbar__actions {
+    justify-content: flex-end;
   }
 
   .catalog-controls {
@@ -1476,10 +1679,6 @@ main {
 @media (max-width: 330px) {
   .filter-row {
     grid-template-columns: 1fr;
-  }
-
-  .brand p {
-    display: none;
   }
 
   .metadata-grid {

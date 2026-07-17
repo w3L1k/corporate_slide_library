@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../src/app.js";
 import type { Logger } from "../src/logger.js";
 import { FileSystemSlideStorage } from "../src/storage/FileSystemSlideStorage.js";
+import { PersonalAssetStorage } from "../src/storage/PersonalAssetStorage.js";
 import { resolveContainedPath } from "../src/storage/pathSafety.js";
 
 const silentLogger: Logger = {
@@ -78,8 +79,11 @@ describe("slide catalog API", () => {
     ]);
 
     const storage = new FileSystemSlideStorage(libraryPath, { logger: silentLogger });
+    const personalAssetStorage = new PersonalAssetStorage(libraryPath);
+    await personalAssetStorage.initialize();
     app = createApp({
       storage,
+      personalAssetStorage,
       config: { corsOrigins: ["http://localhost:3000"], enableAdminReindex: false },
       logger: silentLogger
     });
@@ -214,6 +218,72 @@ describe("slide catalog API", () => {
   it("serves previews with their registered image type", async () => {
     const response = await request(app).get("/api/slides/customer-journey/preview").expect(200);
     expect(response.headers["content-type"]).toContain("image/jpeg");
+  });
+
+  it("uploads and serves registered personal presentations, photos, and logos", async () => {
+    const photo = await request(app)
+      .post("/api/personal-assets")
+      .field("kind", "photo")
+      .field("title", "Командная фотография")
+      .attach(
+        "file",
+        Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1]),
+        "team.png"
+      )
+      .expect(201);
+    const logo = await request(app)
+      .post("/api/personal-assets")
+      .field("kind", "logo")
+      .field("title", "Логотип продукта")
+      .attach("file", Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"></svg>'), "logo.svg")
+      .expect(201);
+    const presentation = await request(app)
+      .post("/api/personal-assets")
+      .field("kind", "presentation")
+      .field("title", "Личная презентация")
+      .attach("file", Buffer.from("PK\u0003\u0004pptx"), "personal.pptx")
+      .expect(201);
+
+    expect(photo.body).toMatchObject({ kind: "photo", mimeType: "image/png" });
+    expect(logo.body).toMatchObject({ kind: "logo", mimeType: "image/svg+xml" });
+    expect(presentation.body).toMatchObject({
+      kind: "presentation",
+      mimeType: "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    });
+
+    const list = await request(app).get("/api/personal-assets").expect(200);
+    expect(list.body.total).toBe(3);
+    expect(list.body.items.map((item: { kind: string }) => item.kind).sort()).toEqual([
+      "logo",
+      "photo",
+      "presentation"
+    ]);
+
+    const file = await request(app)
+      .get(`/api/personal-assets/${photo.body.id}/file`)
+      .expect("Content-Type", /image\/png/)
+      .expect(200);
+    expect(Buffer.from(file.body).subarray(0, 8)).toEqual(
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+    );
+  });
+
+  it("rejects unsupported or unsafe personal uploads", async () => {
+    const unsupported = await request(app)
+      .post("/api/personal-assets")
+      .field("kind", "photo")
+      .field("title", "Not an image")
+      .attach("file", Buffer.from("plain text"), "notes.txt")
+      .expect(400);
+    expect(unsupported.body.error.code).toBe("UNSUPPORTED_PERSONAL_ASSET");
+
+    const unsafeSvg = await request(app)
+      .post("/api/personal-assets")
+      .field("kind", "logo")
+      .field("title", "Unsafe logo")
+      .attach("file", Buffer.from("<svg><script>alert(1)</script></svg>"), "unsafe.svg")
+      .expect(400);
+    expect(unsafeSvg.body.error.code).toBe("UNSUPPORTED_PERSONAL_ASSET");
   });
 
   it("returns friendly errors when registered files are missing", async () => {

@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { SlideLibraryItem, SlideListResponse, SlideStatus } from "@slide-library/shared";
+import type {
+  PersonalAssetKind,
+  SlideLibraryItem,
+  SlideListResponse,
+  SlideStatus
+} from "@slide-library/shared";
+import { PersonalLibrary } from "./components/PersonalLibrary";
 import { SkeletonCatalog } from "./components/SkeletonCatalog";
 import { SlideCard } from "./components/SlideCard";
 import { SlideDetailsDialog } from "./components/SlideDetailsDialog";
@@ -20,6 +26,7 @@ import "./styles.css";
 
 type StatusFilter = SlideStatus | "";
 type LibrarySection = "favorites" | "presentations";
+type LibraryScope = "public" | "personal";
 type ViewMode = "grid" | "list";
 type SortOrder = "updated-desc" | "title-asc";
 
@@ -60,6 +67,8 @@ export function App({
 }: AppProps) {
   const [query, setQuery] = useState("");
   const [activeSection, setActiveSection] = useState<LibrarySection>("presentations");
+  const [libraryScope, setLibraryScope] = useState<LibraryScope>("public");
+  const [personalKind, setPersonalKind] = useState<PersonalAssetKind>("presentation");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [sortOrder, setSortOrder] = useState<SortOrder>("updated-desc");
   const debouncedQuery = useDebouncedValue(query.trim(), searchDebounceMs);
@@ -268,10 +277,24 @@ export function App({
 
       <main>
         <nav className="scope-tabs" aria-label="Область библиотеки">
-          <button className="scope-tabs__item scope-tabs__item--active" type="button">
+          <button
+            className={`scope-tabs__item ${
+              libraryScope === "public" ? "scope-tabs__item--active" : ""
+            }`}
+            type="button"
+            onClick={() => setLibraryScope("public")}
+            aria-current={libraryScope === "public" ? "page" : undefined}
+          >
             Публичное
           </button>
-          <button className="scope-tabs__item" type="button" disabled>
+          <button
+            className={`scope-tabs__item ${
+              libraryScope === "personal" ? "scope-tabs__item--active" : ""
+            }`}
+            type="button"
+            onClick={() => setLibraryScope("personal")}
+            aria-current={libraryScope === "personal" ? "page" : undefined}
+          >
             Личное
           </button>
         </nav>
@@ -284,27 +307,62 @@ export function App({
             <div className="library-sidebar__menu">
               <button
                 className={`library-sidebar__item ${
-                  activeSection === "favorites" ? "library-sidebar__item--active" : ""
+                  libraryScope === "public" && activeSection === "favorites"
+                    ? "library-sidebar__item--active"
+                    : ""
                 }`}
                 type="button"
                 onClick={() => setActiveSection("favorites")}
-                aria-current={activeSection === "favorites" ? "page" : undefined}
+                disabled={libraryScope === "personal"}
+                aria-current={
+                  libraryScope === "public" && activeSection === "favorites"
+                    ? "page"
+                    : undefined
+                }
               >
                 <span aria-hidden="true">♡</span>
                 <strong>Избранное</strong>
               </button>
               <button
                 className={`library-sidebar__item ${
-                  activeSection === "presentations" ? "library-sidebar__item--active" : ""
+                  (libraryScope === "public" && activeSection === "presentations") ||
+                  (libraryScope === "personal" && personalKind === "presentation")
+                    ? "library-sidebar__item--active"
+                    : ""
                 }`}
                 type="button"
-                onClick={() => setActiveSection("presentations")}
-                aria-current={activeSection === "presentations" ? "page" : undefined}
+                onClick={() => {
+                  if (libraryScope === "personal") {
+                    setPersonalKind("presentation");
+                  } else {
+                    setActiveSection("presentations");
+                  }
+                }}
+                aria-current={
+                  (libraryScope === "public" && activeSection === "presentations") ||
+                  (libraryScope === "personal" && personalKind === "presentation")
+                    ? "page"
+                    : undefined
+                }
               >
                 <span aria-hidden="true">▧</span>
                 <strong>Презентации</strong>
               </button>
-              <button className="library-sidebar__item" type="button" disabled>
+              <button
+                className={`library-sidebar__item ${
+                  libraryScope === "personal" && personalKind === "photo"
+                    ? "library-sidebar__item--active"
+                    : ""
+                }`}
+                type="button"
+                disabled={libraryScope === "public"}
+                onClick={() => setPersonalKind("photo")}
+                aria-current={
+                  libraryScope === "personal" && personalKind === "photo"
+                    ? "page"
+                    : undefined
+                }
+              >
                 <span aria-hidden="true">▣</span>
                 <strong>Фотографии</strong>
               </button>
@@ -316,7 +374,21 @@ export function App({
                 <span aria-hidden="true">◎</span>
                 <strong>Иконки</strong>
               </button>
-              <button className="library-sidebar__item" type="button" disabled>
+              <button
+                className={`library-sidebar__item ${
+                  libraryScope === "personal" && personalKind === "logo"
+                    ? "library-sidebar__item--active"
+                    : ""
+                }`}
+                type="button"
+                disabled={libraryScope === "public"}
+                onClick={() => setPersonalKind("logo")}
+                aria-current={
+                  libraryScope === "personal" && personalKind === "logo"
+                    ? "page"
+                    : undefined
+                }
+              >
                 <span aria-hidden="true">A</span>
                 <strong>Логотипы</strong>
               </button>
@@ -340,6 +412,12 @@ export function App({
           </aside>
 
           <div className="workspace-content">
+        {libraryScope === "personal" ? (
+          <PersonalLibrary api={api} kind={personalKind} onNotify={setToast} />
+        ) : null}
+
+        {libraryScope === "public" ? (
+          <>
         {powerPointUnavailableReason ? (
           <aside className="environment-notice" aria-label="PowerPoint integration status">
             <span className="environment-notice__icon" aria-hidden="true">
@@ -641,6 +719,8 @@ export function App({
             </>
           ) : null}
         </section>
+          </>
+        ) : null}
           </div>
         </div>
       </main>

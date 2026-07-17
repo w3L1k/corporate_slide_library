@@ -50,6 +50,42 @@ describe("Slide Library application", () => {
     expect(screen.getByRole("heading", { name: "Избранное пока пусто" })).toBeInTheDocument();
   });
 
+  it("opens the personal library and uploads a photo", async () => {
+    const api = createApi();
+    render(<App api={api} powerPointService={createAvailablePowerPointService()} />);
+
+    await screen.findByText(revenueSlide.title);
+    fireEvent.click(screen.getByRole("button", { name: "Личное" }));
+    fireEvent.click(screen.getByRole("button", { name: "Фотографии" }));
+
+    expect(
+      screen.getByRole("heading", { name: "Фотографии" })
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Название"), {
+      target: { value: "Командная фотография" }
+    });
+    const file = new File(
+      [new Uint8Array([0x89, 0x50, 0x4e, 0x47])],
+      "team.png",
+      { type: "image/png" }
+    );
+    fireEvent.change(screen.getByLabelText("Файл"), {
+      target: { files: [file] }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Добавить" }));
+
+    await waitFor(() =>
+      expect(api.uploadPersonalAsset).toHaveBeenCalledWith(
+        "photo",
+        "Командная фотография",
+        file
+      )
+    );
+    expect(await screen.findByText("Командная фотография")).toBeInTheDocument();
+    expect(screen.getByText("Файл добавлен в личную библиотеку.")).toBeInTheDocument();
+  });
+
   it("shows an accessible loading state until the catalog request completes", async () => {
     const catalog = createDeferred<SlideListResponse>();
     const api = createApi(() => catalog.promise);

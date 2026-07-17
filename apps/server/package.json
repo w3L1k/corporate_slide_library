@@ -14,11 +14,13 @@
     "@slide-library/shared": "1.0.0",
     "cors": "latest",
     "dotenv": "latest",
-    "express": "latest"
+    "express": "latest",
+    "multer": "^2.2.0"
   },
   "devDependencies": {
     "@types/cors": "latest",
     "@types/express": "latest",
+    "@types/multer": "^2.2.0",
     "@types/node": "latest",
     "@types/supertest": "latest",
     "supertest": "latest",

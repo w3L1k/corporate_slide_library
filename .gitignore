@@ -7,5 +7,6 @@ coverage/
 Thumbs.db
 .vite/
 work/
+data/personal-assets/
 *.user
 *.suo

@@ -2,6 +2,7 @@ import { createApp } from "./app.js";
 import { loadConfig } from "./config.js";
 import { logger } from "./logger.js";
 import { FileSystemSlideStorage } from "./storage/FileSystemSlideStorage.js";
+import { PersonalAssetStorage } from "./storage/PersonalAssetStorage.js";
 
 async function start(): Promise<void> {
   const config = loadConfig();
@@ -13,10 +14,12 @@ async function start(): Promise<void> {
   });
 
   const storage = new FileSystemSlideStorage(config.libraryPath, { logger });
+  const personalAssetStorage = new PersonalAssetStorage(config.libraryPath);
+  await personalAssetStorage.initialize();
   const catalog = await storage.refresh();
   logger.info("Initial slide catalog is ready", { itemCount: catalog.length });
 
-  const app = createApp({ storage, config, logger });
+  const app = createApp({ storage, personalAssetStorage, config, logger });
   const server = app.listen(config.port, config.host, () => {
     logger.info("Slide library server is listening", {
       host: config.host,

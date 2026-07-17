@@ -1,13 +1,17 @@
 import {
+  personalAssetKindValues,
   slideStatusValues,
   type ApiErrorResponse,
   type HealthResponse,
+  type PersonalAssetKind,
+  type PersonalAssetListResponse,
   type ReindexResponse,
   type SlideLibraryItem,
   type SlideListResponse,
   type SlideStatus
 } from "@slide-library/shared";
 import cors from "cors";
+import multer from "multer";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import express, {
@@ -22,6 +26,7 @@ import { ApiError } from "./errors.js";
 import type { Logger } from "./logger.js";
 import { logger as defaultLogger } from "./logger.js";
 import type { SlideStorage } from "./storage/SlideStorage.js";
+import type { PersonalAssetStorage } from "./storage/PersonalAssetStorage.js";
 import {
   AssetNotFoundError,
   CatalogReadError,
@@ -32,6 +37,7 @@ import {
 
 export interface CreateAppOptions {
   storage: SlideStorage;
+  personalAssetStorage?: PersonalAssetStorage;
   config: Pick<ServerConfig, "corsOrigins" | "enableAdminReindex">;
   logger?: Logger;
 }
@@ -39,6 +45,14 @@ export interface CreateAppOptions {
 const SLIDE_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const POWERPOINT_CONTENT_TYPE =
   "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const MAX_PERSONAL_ASSET_SIZE = 20 * 1024 * 1024;
+
+interface ValidatedUpload {
+  extension: string;
+  mimeType: string;
+}
 
 function asyncRoute(handler: RequestHandler): RequestHandler {
   return (request, response, next) => {
@@ -84,6 +98,87 @@ function requireValidId(request: Request): string {
   return id;
 }
 
+function requirePersonalAssetId(request: Request): string {
+  const id = request.params.id;
+  if (typeof id !== "string" || !UUID_PATTERN.test(id)) {
+    throw new ApiError(400, "INVALID_PERSONAL_ASSET_ID", "Personal asset id has an invalid format");
+  }
+  return id;
+}
+
+function startsWithBytes(buffer: Buffer, expected: readonly number[]): boolean {
+  return expected.every((value, index) => buffer[index] === value);
+}
+
+function isWebp(buffer: Buffer): boolean {
+  return (
+    buffer.length >= 12 &&
+    buffer.subarray(0, 4).toString("ascii") === "RIFF" &&
+    buffer.subarray(8, 12).toString("ascii") === "WEBP"
+  );
+}
+
+function isSafeSvg(buffer: Buffer): boolean {
+  const text = buffer.toString("utf8").trim();
+  return (
+    /^(?:<\?xml[^>]*>\s*)?<svg[\s>]/iu.test(text) &&
+    !/<script[\s>]/iu.test(text) &&
+    !/<foreignObject[\s>]/iu.test(text) &&
+    !/\son[a-z]+\s*=/iu.test(text) &&
+    !/javascript\s*:/iu.test(text)
+  );
+}
+
+function validatePersonalUpload(
+  kind: PersonalAssetKind,
+  file: Express.Multer.File
+): ValidatedUpload {
+  const extension = path.extname(file.originalname).toLowerCase();
+  const buffer = file.buffer;
+
+  if (
+    kind === "presentation" &&
+    extension === ".pptx" &&
+    startsWithBytes(buffer, [0x50, 0x4b])
+  ) {
+    return { extension, mimeType: POWERPOINT_CONTENT_TYPE };
+  }
+
+  if (
+    (kind === "photo" || kind === "logo") &&
+    extension === ".png" &&
+    startsWithBytes(buffer, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+  ) {
+    return { extension, mimeType: "image/png" };
+  }
+
+  if (
+    (kind === "photo" || kind === "logo") &&
+    [".jpg", ".jpeg"].includes(extension) &&
+    startsWithBytes(buffer, [0xff, 0xd8, 0xff])
+  ) {
+    return { extension, mimeType: "image/jpeg" };
+  }
+
+  if (
+    (kind === "photo" || kind === "logo") &&
+    extension === ".webp" &&
+    isWebp(buffer)
+  ) {
+    return { extension, mimeType: "image/webp" };
+  }
+
+  if (kind === "logo" && extension === ".svg" && isSafeSvg(buffer)) {
+    return { extension, mimeType: "image/svg+xml" };
+  }
+
+  throw new ApiError(
+    400,
+    "UNSUPPORTED_PERSONAL_ASSET",
+    "Upload a PPTX presentation, PNG/JPEG/WebP photo, or PNG/JPEG/WebP/SVG logo"
+  );
+}
+
 function previewContentType(fileName: string): string {
   switch (path.extname(fileName).toLowerCase()) {
     case ".png":
@@ -117,7 +212,7 @@ function getHttpErrorStatus(error: unknown): number | undefined {
 }
 
 export function createApp(options: CreateAppOptions): express.Express {
-  const { storage, config } = options;
+  const { storage, personalAssetStorage, config } = options;
   const log = options.logger ?? defaultLogger;
   const app = express();
 
@@ -161,6 +256,80 @@ export function createApp(options: CreateAppOptions): express.Express {
   app.get("/api/health", (_request, response: Response<HealthResponse>) => {
     response.json({ status: "ok" });
   });
+
+  if (personalAssetStorage) {
+    const upload = multer({
+      storage: multer.memoryStorage(),
+      limits: { fileSize: MAX_PERSONAL_ASSET_SIZE, files: 1, fields: 4 }
+    });
+
+    app.get(
+      "/api/personal-assets",
+      asyncRoute(async (_request, response: Response<PersonalAssetListResponse>) => {
+        const items = await personalAssetStorage.list();
+        response.json({ items, total: items.length });
+      })
+    );
+
+    app.post(
+      "/api/personal-assets",
+      upload.single("file"),
+      asyncRoute(async (request, response) => {
+        const rawKind = typeof request.body.kind === "string" ? request.body.kind : "";
+        if (!personalAssetKindValues.includes(rawKind as PersonalAssetKind)) {
+          throw new ApiError(
+            400,
+            "INVALID_PERSONAL_ASSET_KIND",
+            `kind must be one of: ${personalAssetKindValues.join(", ")}`
+          );
+        }
+        if (!request.file) {
+          throw new ApiError(400, "PERSONAL_ASSET_FILE_REQUIRED", "Select a file to upload");
+        }
+
+        const title =
+          typeof request.body.title === "string" ? request.body.title.trim() : "";
+        if (!title || title.length > 120) {
+          throw new ApiError(
+            400,
+            "INVALID_PERSONAL_ASSET_TITLE",
+            "title must contain between 1 and 120 characters"
+          );
+        }
+
+        const kind = rawKind as PersonalAssetKind;
+        const validated = validatePersonalUpload(kind, request.file);
+        const item = await personalAssetStorage.add({
+          title,
+          kind,
+          originalFileName: path.basename(request.file.originalname).slice(0, 180),
+          mimeType: validated.mimeType,
+          extension: validated.extension,
+          data: request.file.buffer
+        });
+        response.status(201).json(item);
+      })
+    );
+
+    app.get(
+      "/api/personal-assets/:id/file",
+      asyncRoute(async (request, response) => {
+        const id = requirePersonalAssetId(request);
+        const asset = await personalAssetStorage.getFile(id);
+        if (!asset) {
+          throw new ApiError(404, "PERSONAL_ASSET_NOT_FOUND", "Personal asset was not found");
+        }
+
+        response.setHeader("Content-Type", asset.item.mimeType);
+        response.setHeader("Content-Disposition", `inline; filename="asset-${asset.item.id}"`);
+        response.setHeader("Cache-Control", "private, max-age=0, must-revalidate");
+        if (asset.item.mimeType === "image/svg+xml") {
+          response.setHeader("Content-Security-Policy", "default-src 'none'; sandbox");
+        }
+        response.send(asset.data);
+      })
+    );
+  }
 
   app.get(
     "/api/slides",
@@ -356,6 +525,17 @@ export function createApp(options: CreateAppOptions): express.Express {
     }
     if (httpStatus === 413) {
       sendApiError(response, 413, "REQUEST_TOO_LARGE", "The request body is too large");
+      return;
+    }
+    if (error instanceof multer.MulterError) {
+      sendApiError(
+        response,
+        error.code === "LIMIT_FILE_SIZE" ? 413 : 400,
+        error.code === "LIMIT_FILE_SIZE" ? "PERSONAL_ASSET_TOO_LARGE" : "INVALID_UPLOAD",
+        error.code === "LIMIT_FILE_SIZE"
+          ? "Personal assets must not exceed 20 MB"
+          : "The personal asset upload is invalid"
+      );
       return;
     }
 

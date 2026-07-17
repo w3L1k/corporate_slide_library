@@ -47,7 +47,20 @@ export const createApi = (
   listSlides: vi.fn(listSlidesImplementation),
   getSlide: vi.fn(async () => revenueSlide),
   downloadSlide: vi.fn(async () => new ArrayBuffer(0)),
-  getPreviewUrl: vi.fn((id: string) => `/api/slides/${encodeURIComponent(id)}/preview`)
+  getPreviewUrl: vi.fn((id: string) => `/api/slides/${encodeURIComponent(id)}/preview`),
+  listPersonalAssets: vi.fn(async () => ({ items: [], total: 0 })),
+  uploadPersonalAsset: vi.fn(async (kind, title, file) => ({
+    id: "11111111-1111-4111-8111-111111111111",
+    title,
+    kind,
+    fileName: file.name,
+    mimeType: file.type || "application/octet-stream",
+    size: file.size,
+    createdAt: "2026-07-17T10:00:00.000Z"
+  })),
+  getPersonalAssetFileUrl: vi.fn(
+    (id: string) => `/api/personal-assets/${encodeURIComponent(id)}/file`
+  )
 });
 
 export const createAvailablePowerPointService = (
