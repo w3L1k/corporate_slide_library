@@ -47,6 +47,7 @@ Checked items are present in the repository or were verified by direct static/pa
 - [x] Catalog cards display preview, title, category, status, and updated date.
 - [x] The sidebar can collapse to an icon rail and persists the user's choice locally.
 - [x] User-facing controls, states, statuses, and errors are consistently localized in Russian; unfinished navigation placeholders are hidden.
+- [x] Successfully inserted slide IDs are saved locally and exposed through a filterable, persistent Recent section.
 - [x] Search is debounced and has a clear control.
 - [x] Category/status filters, result count, and reset control are implemented.
 - [x] Enlarged details dialog includes version and available governance metadata.
@@ -85,9 +86,9 @@ Checked items are present in the repository or were verified by direct static/pa
 - [x] `npm run validate-library` passes against all 12 final demo items.
 - [x] `npm run lint` passes in the final revision.
 - [x] `npm run typecheck` passes in the final revision, including tools.
-- [x] `npm run test` passes: 53 server tests and 40 add-in tests.
+- [x] `npm run test` passes: 53 server tests and 41 add-in tests.
 - [x] `npm run build` passes in the final revision.
-- [x] The aggregate `npm run check` passes: library validation, manifest validation, lint (0 errors), typecheck, 93 tests (53 server + 40 add-in), builds.
+- [x] The aggregate `npm run check` passes: library validation, manifest validation, lint (0 errors), typecheck, 94 tests (53 server + 41 add-in), builds.
 - [x] `npm audit` reports 0 known vulnerabilities for the installed dependency tree.
 
 ## Pilot readiness boundary

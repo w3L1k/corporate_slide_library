@@ -68,7 +68,7 @@ The current state is tracked in [FINAL_CHECKLIST.md](FINAL_CHECKLIST.md).
 
 - Search and filtering scan the in-memory catalog. There is no full-text engine, stemming, typo tolerance, synonym management, ranking, or pagination.
 - The intended scale is tens to a few hundred items in one department, not a multi-tenant organization-wide catalog.
-- There are no favorites, recently used items, recommendations, collections, usage analytics, insertion analytics, or offline mode.
+- Favorites and recently used slides are stored only in the current browser/task-pane profile and are not synchronized between devices. There are no shared collections, recommendations, usage analytics, insertion analytics, or offline mode.
 - There is no version history in the product. `version` and `updatedAt` are owner-maintained metadata fields, not automatically generated revision records.
 - There is one library root per server process and no UI for switching departments or libraries.
 - The task-pane interface is localized in Russian. Demo slide titles, descriptions, and governance metadata intentionally remain in their source language, and there is no runtime language switch.

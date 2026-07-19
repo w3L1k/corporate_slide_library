@@ -61,6 +61,7 @@ describe("Slide Library application", () => {
 
     await screen.findByText(revenueSlide.title);
     expect(screen.getByRole("button", { name: "Избранное" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Недавние" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Презентации" })).toBeInTheDocument();
     expect(screen.getByRole("searchbox", { name: "Поиск слайдов" })).toBeInTheDocument();
 
@@ -71,7 +72,7 @@ describe("Slide Library application", () => {
     expect(screen.queryByRole("button", { name: "ИИ-ассистент" })).not.toBeInTheDocument();
   });
 
-  it("switches between presentations and the empty favorites section", async () => {
+  it("switches between presentations and empty saved sections", async () => {
     render(<App api={createApi()} powerPointService={createAvailablePowerPointService()} />);
 
     expect(await screen.findByText(revenueSlide.title)).toBeInTheDocument();
@@ -79,6 +80,11 @@ describe("Slide Library application", () => {
 
     expect(screen.getByRole("heading", { name: "Избранное пока пусто" })).toBeInTheDocument();
     expect(screen.queryByText(revenueSlide.title)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Недавние" }));
+    expect(
+      screen.getByRole("heading", { name: "Недавних слайдов пока нет" })
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Открыть презентации" }));
     expect(screen.getByText(revenueSlide.title)).toBeInTheDocument();
@@ -103,6 +109,27 @@ describe("Slide Library application", () => {
       screen.getByRole("button", { name: `Убрать из избранного: ${revenueSlide.title}` })
     );
     expect(screen.getByRole("heading", { name: "Избранное пока пусто" })).toBeInTheDocument();
+  });
+
+  it("restores recent slides from local storage", async () => {
+    globalThis.localStorage.setItem(
+      "slidebrary.recent-slide-ids",
+      JSON.stringify([strategySlide.id])
+    );
+    const api = createApi();
+    api.getSlide = vi.fn(async () => strategySlide);
+
+    render(<App api={api} powerPointService={createAvailablePowerPointService()} />);
+
+    await screen.findByText(revenueSlide.title);
+    fireEvent.click(screen.getByRole("button", { name: "Недавние" }));
+
+    expect(await screen.findByText(strategySlide.title)).toBeInTheDocument();
+    expect(api.getSlide).toHaveBeenCalledWith(
+      strategySlide.id,
+      expect.any(AbortSignal)
+    );
+    expect(screen.queryByText(revenueSlide.title)).not.toBeInTheDocument();
   });
 
   it("opens the personal library and uploads a photo", async () => {
@@ -532,6 +559,18 @@ describe("Slide Library application", () => {
       await screen.findByText("Слайд успешно добавлен в презентацию.")
     ).toBeInTheDocument();
     expect(
+      JSON.parse(
+        globalThis.localStorage.getItem("slidebrary.recent-slide-ids") ?? "[]"
+      )
+    ).toEqual([revenueSlide.id]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Недавние" }));
+    expect(await screen.findByText(revenueSlide.title)).toBeInTheDocument();
+    expect(api.getSlide).toHaveBeenCalledWith(
+      revenueSlide.id,
+      expect.any(AbortSignal)
+    );
+    expect(
       screen.getByRole("button", { name: `Добавить в PowerPoint: ${revenueSlide.title}` })
     ).toBeEnabled();
   });
@@ -565,6 +604,11 @@ describe("Slide Library application", () => {
     expect(
       await screen.findByText("2 слайда успешно добавлено в презентацию.")
     ).toBeInTheDocument();
+    expect(
+      JSON.parse(
+        globalThis.localStorage.getItem("slidebrary.recent-slide-ids") ?? "[]"
+      )
+    ).toEqual([revenueSlide.id, strategySlide.id]);
     expect(screen.queryByLabelText("Выбранные слайды")).not.toBeInTheDocument();
   });
 
@@ -593,6 +637,9 @@ describe("Slide Library application", () => {
     expect(
       screen.getByRole("button", { name: `Добавить в PowerPoint: ${revenueSlide.title}` })
     ).toBeEnabled();
+    expect(
+      globalThis.localStorage.getItem("slidebrary.recent-slide-ids")
+    ).toBeNull();
   });
 
   it("keeps browsing functional and gives a friendly insert explanation outside PowerPoint", async () => {

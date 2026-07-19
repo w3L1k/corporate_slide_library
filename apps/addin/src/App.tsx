@@ -13,6 +13,7 @@ import { SlideDetailsDialog } from "./components/SlideDetailsDialog";
 import { Toast, type ToastMessage } from "./components/Toast";
 import { useDebouncedValue } from "./hooks/useDebouncedValue";
 import { useFavorites } from "./hooks/useFavorites";
+import { useRecentSlides } from "./hooks/useRecentSlides";
 import {
   slideLibraryApi,
   type SlideLibraryApi,
@@ -26,7 +27,7 @@ import {
 import "./styles.css";
 
 type StatusFilter = SlideStatus | "";
-type LibrarySection = "favorites" | "presentations";
+type LibrarySection = "favorites" | "recent" | "presentations";
 type LibraryScope = "public" | "personal";
 type ViewMode = "grid" | "list";
 type SortOrder = "updated-desc" | "title-asc";
@@ -81,11 +82,26 @@ interface CatalogState {
   error: string | null;
 }
 
+interface RecentCatalogState {
+  items: SlideLibraryItem[];
+  loading: boolean;
+  error: string | null;
+}
+
 const initialCatalogState: CatalogState = {
   response: null,
   loading: true,
   error: null
 };
+
+const initialRecentCatalogState: RecentCatalogState = {
+  items: [],
+  loading: false,
+  error: null
+};
+
+const normalizeForSearch = (value: string): string =>
+  value.normalize("NFKC").toLocaleLowerCase("ru-RU");
 
 const getErrorMessage = (error: unknown): string => {
   if (error instanceof Error && error.message.trim()) {
@@ -112,12 +128,16 @@ export function App({
   const [status, setStatus] = useState<StatusFilter>(DEFAULT_STATUS);
   const [refreshKey, setRefreshKey] = useState(0);
   const [catalog, setCatalog] = useState<CatalogState>(initialCatalogState);
+  const [recentCatalog, setRecentCatalog] = useState<RecentCatalogState>(
+    initialRecentCatalogState
+  );
   const [categories, setCategories] = useState<string[]>([]);
   const [selectedSlide, setSelectedSlide] = useState<SlideLibraryItem | null>(null);
   const [selectedSlideIds, setSelectedSlideIds] = useState<Set<string>>(new Set());
   const [insertingId, setInsertingId] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const { favoriteIds, toggleFavorite } = useFavorites();
+  const { recentIds, recordRecent } = useRecentSlides();
   const powerPointUnavailableReason = powerPointService.getUnavailableReason();
 
   useEffect(() => {
@@ -172,6 +192,41 @@ export function App({
     return () => controller.abort();
   }, [api, category, debouncedQuery, refreshKey, status]);
 
+  useEffect(() => {
+    if (activeSection !== "recent" || recentIds.length === 0) {
+      return;
+    }
+
+    const controller = new AbortController();
+    queueMicrotask(() => {
+      if (!controller.signal.aborted) {
+        setRecentCatalog((current) => ({
+          items: current.items,
+          loading: true,
+          error: null
+        }));
+      }
+    });
+
+    void Promise.all(recentIds.map((id) => api.getSlide(id, controller.signal)))
+      .then((items) => {
+        if (!controller.signal.aborted) {
+          setRecentCatalog({ items, loading: false, error: null });
+        }
+      })
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted) {
+          setRecentCatalog({
+            items: [],
+            loading: false,
+            error: getErrorMessage(error)
+          });
+        }
+      });
+
+    return () => controller.abort();
+  }, [activeSection, api, recentIds, refreshKey]);
+
   const hasActiveFilters = Boolean(query.trim() || category || status !== DEFAULT_STATUS);
   const isEmptyCatalog =
     !hasActiveFilters &&
@@ -194,6 +249,7 @@ export function App({
       setInsertingId(item.id);
       try {
         await powerPointService.insertSlide(item.id);
+        recordRecent([item.id]);
         setToast({ kind: "success", text: "Слайд успешно добавлен в презентацию." });
       } catch (error: unknown) {
         if (import.meta.env.DEV && !(error instanceof PowerPointUnavailableError)) {
@@ -209,12 +265,18 @@ export function App({
         setInsertingId(null);
       }
     },
-    [insertingId, powerPointService]
+    [insertingId, powerPointService, recordRecent]
   );
 
   const currentSubtitle = useMemo(() => {
     if (libraryScope === "personal") {
       return `Личная библиотека: ${PERSONAL_KIND_TITLES[personalKind].toLowerCase()}`;
+    }
+    if (activeSection === "favorites") {
+      return "Избранные корпоративные слайды";
+    }
+    if (activeSection === "recent") {
+      return "Последние добавленные в PowerPoint слайды";
     }
     if (status === "approved") {
       return "Одобренные материалы, готовые к использованию";
@@ -226,7 +288,7 @@ export function App({
       return "Устаревшие материалы";
     }
     return "Все корпоративные материалы";
-  }, [libraryScope, personalKind, status]);
+  }, [activeSection, libraryScope, personalKind, status]);
 
   const visibleItems = useMemo(() => {
     const items = [...(catalog.response?.items ?? [])];
@@ -246,10 +308,66 @@ export function App({
     () => visibleItems.filter((item) => favoriteIds.has(item.id)),
     [favoriteIds, visibleItems]
   );
+  const recentItems = useMemo(() => {
+    const normalizedQuery = normalizeForSearch(debouncedQuery);
+    const normalizedCategory = normalizeForSearch(category);
+    const items = recentCatalog.items.filter((item) => {
+      const matchesQuery =
+        !normalizedQuery ||
+        [
+          item.title,
+          item.description,
+          item.category,
+          ...item.tags,
+          item.searchText
+        ].some(
+          (value) =>
+            value !== undefined &&
+            normalizeForSearch(value).includes(normalizedQuery)
+        );
+      const matchesCategory =
+        !normalizedCategory ||
+        normalizeForSearch(item.category) === normalizedCategory;
+      const matchesStatus = !status || item.status === status;
+      return matchesQuery && matchesCategory && matchesStatus;
+    });
+
+    if (sortOrder === "title-asc") {
+      return items.sort((left, right) =>
+        left.title.localeCompare(right.title, undefined, { sensitivity: "base" })
+      );
+    }
+
+    return items.sort(
+      (left, right) =>
+        recentIds.indexOf(left.id) - recentIds.indexOf(right.id)
+    );
+  }, [
+    category,
+    debouncedQuery,
+    recentCatalog.items,
+    recentIds,
+    sortOrder,
+    status
+  ]);
+  const activeItems =
+    activeSection === "favorites"
+      ? favoriteItems
+      : activeSection === "recent"
+        ? recentItems
+        : visibleItems;
   const selectedItems = useMemo(
-    () => visibleItems.filter((item) => selectedSlideIds.has(item.id)),
-    [selectedSlideIds, visibleItems]
+    () => activeItems.filter((item) => selectedSlideIds.has(item.id)),
+    [activeItems, selectedSlideIds]
   );
+  const displayedTotal =
+    activeSection === "favorites"
+      ? favoriteItems.length
+      : activeSection === "recent"
+        ? recentCatalog.loading
+          ? undefined
+          : recentItems.length
+        : catalog.response?.total;
 
   const toggleSlideSelection = useCallback((id: string): void => {
     setSelectedSlideIds((current) => {
@@ -271,6 +389,7 @@ export function App({
     setInsertingId(MULTI_INSERT_ID);
     try {
       await powerPointService.insertSlides(selectedItems.map((item) => item.id));
+      recordRecent(selectedItems.map((item) => item.id));
       setSelectedSlideIds(new Set());
       setToast({
         kind: "success",
@@ -292,7 +411,7 @@ export function App({
     } finally {
       setInsertingId(null);
     }
-  }, [insertingId, powerPointService, selectedItems]);
+  }, [insertingId, powerPointService, recordRecent, selectedItems]);
 
   return (
     <div className="app-shell">
@@ -386,20 +505,36 @@ export function App({
             </div>
             <div className="library-sidebar__menu" id="library-sidebar-menu">
               {libraryScope === "public" ? (
-                <button
-                  className={`library-sidebar__item ${
-                    activeSection === "favorites"
-                      ? "library-sidebar__item--active"
-                      : ""
-                  }`}
-                  type="button"
-                  onClick={() => setActiveSection("favorites")}
-                  title="Избранное"
-                  aria-current={activeSection === "favorites" ? "page" : undefined}
-                >
-                  <span aria-hidden="true">♡</span>
-                  <strong>Избранное</strong>
-                </button>
+                <>
+                  <button
+                    className={`library-sidebar__item ${
+                      activeSection === "favorites"
+                        ? "library-sidebar__item--active"
+                        : ""
+                    }`}
+                    type="button"
+                    onClick={() => setActiveSection("favorites")}
+                    title="Избранное"
+                    aria-current={activeSection === "favorites" ? "page" : undefined}
+                  >
+                    <span aria-hidden="true">♡</span>
+                    <strong>Избранное</strong>
+                  </button>
+                  <button
+                    className={`library-sidebar__item ${
+                      activeSection === "recent"
+                        ? "library-sidebar__item--active"
+                        : ""
+                    }`}
+                    type="button"
+                    onClick={() => setActiveSection("recent")}
+                    title="Недавние"
+                    aria-current={activeSection === "recent" ? "page" : undefined}
+                  >
+                    <span aria-hidden="true">◷</span>
+                    <strong>Недавние</strong>
+                  </button>
+                </>
               ) : null}
               <button
                 className={`library-sidebar__item ${
@@ -591,12 +726,12 @@ export function App({
 
           <div className="results-toolbar">
             <p aria-live="polite" aria-atomic="true">
-              {catalog.response ? (
+              {displayedTotal !== undefined ? (
                 <>
-                  <strong>{catalog.response.total}</strong>{" "}
-                  {getSlideNoun(catalog.response.total)}
+                  <strong>{displayedTotal}</strong>{" "}
+                  {getSlideNoun(displayedTotal)}
                 </>
-              ) : catalog.loading ? (
+              ) : catalog.loading || recentCatalog.loading ? (
                 "Загрузка…"
               ) : (
                 "—"
@@ -693,7 +828,10 @@ export function App({
         <section
           className="catalog-content"
           aria-label="Каталог слайдов"
-          aria-busy={activeSection === "presentations" && catalog.loading}
+          aria-busy={
+            (activeSection === "presentations" && catalog.loading) ||
+            (activeSection === "recent" && recentCatalog.loading)
+          }
         >
           {activeSection === "favorites" && favoriteItems.length === 0 ? (
             <div className="state-panel">
@@ -724,6 +862,105 @@ export function App({
                   inserting={insertingId === item.id}
                   insertionBlocked={insertingId !== null}
                   favorite
+                  selected={selectedSlideIds.has(item.id)}
+                  onToggleFavorite={() => toggleFavorite(item.id)}
+                  onToggleSelection={() => toggleSlideSelection(item.id)}
+                  onOpen={() => setSelectedSlide(item)}
+                  onInsert={() => void insertSlide(item)}
+                />
+              ))}
+            </div>
+          ) : null}
+
+          {activeSection === "recent" && recentIds.length === 0 ? (
+            <div className="state-panel">
+              <span className="state-panel__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="8" />
+                  <path d="M12 7v5l3.5 2M5.5 5.5L3 8" />
+                </svg>
+              </span>
+              <h2>Недавних слайдов пока нет</h2>
+              <p>
+                После успешной вставки слайды появятся здесь в порядке
+                использования.
+              </p>
+              <button
+                className="button button--secondary"
+                type="button"
+                onClick={() => setActiveSection("presentations")}
+              >
+                Открыть презентации
+              </button>
+            </div>
+          ) : null}
+
+          {activeSection === "recent" &&
+          recentIds.length > 0 &&
+          (recentCatalog.loading ||
+            (!recentCatalog.error && recentCatalog.items.length === 0)) ? (
+            <SkeletonCatalog />
+          ) : null}
+
+          {activeSection === "recent" &&
+          recentIds.length > 0 &&
+          !recentCatalog.loading &&
+          recentCatalog.error ? (
+            <div className="state-panel state-panel--error" role="alert">
+              <span className="state-panel__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 3l9 16H3l9-16zM12 8v5M12 16.5v.5" />
+                </svg>
+              </span>
+              <h2>Не удалось загрузить недавние слайды</h2>
+              <p>{recentCatalog.error}</p>
+              <button
+                className="button button--primary"
+                type="button"
+                onClick={() => setRefreshKey((value) => value + 1)}
+              >
+                Повторить
+              </button>
+            </div>
+          ) : null}
+
+          {activeSection === "recent" &&
+          recentCatalog.items.length > 0 &&
+          !recentCatalog.loading &&
+          !recentCatalog.error &&
+          recentItems.length === 0 ? (
+            <div className="state-panel">
+              <span className="state-panel__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <circle cx="10" cy="10" r="6" />
+                  <path d="M14.5 14.5L20 20M7.5 10h5" />
+                </svg>
+              </span>
+              <h2>Недавние слайды не найдены</h2>
+              <p>Измените поисковый запрос или фильтры.</p>
+              <button
+                className="button button--secondary"
+                type="button"
+                onClick={resetFilters}
+              >
+                Очистить поиск и фильтры
+              </button>
+            </div>
+          ) : null}
+
+          {activeSection === "recent" &&
+          !recentCatalog.loading &&
+          !recentCatalog.error &&
+          recentItems.length > 0 ? (
+            <div className={`slide-grid slide-grid--${viewMode}`}>
+              {recentItems.map((item) => (
+                <SlideCard
+                  key={item.id}
+                  item={item}
+                  previewUrl={api.getPreviewUrl(item.id)}
+                  inserting={insertingId === item.id}
+                  insertionBlocked={insertingId !== null}
+                  favorite={favoriteIds.has(item.id)}
                   selected={selectedSlideIds.has(item.id)}
                   onToggleFavorite={() => toggleFavorite(item.id)}
                   onToggleSelection={() => toggleSlideSelection(item.id)}
