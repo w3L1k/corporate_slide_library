@@ -56,6 +56,21 @@ describe("Slide Library application", () => {
     );
   });
 
+  it("shows Russian controls without inactive navigation placeholders", async () => {
+    render(<App api={createApi()} powerPointService={createAvailablePowerPointService()} />);
+
+    await screen.findByText(revenueSlide.title);
+    expect(screen.getByRole("button", { name: "Избранное" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Презентации" })).toBeInTheDocument();
+    expect(screen.getByRole("searchbox", { name: "Поиск слайдов" })).toBeInTheDocument();
+
+    expect(screen.queryByRole("button", { name: "Открыть профиль" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Иконки" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Шаблоны" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Продукты" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "ИИ-ассистент" })).not.toBeInTheDocument();
+  });
+
   it("switches between presentations and the empty favorites section", async () => {
     render(<App api={createApi()} powerPointService={createAvailablePowerPointService()} />);
 
@@ -74,7 +89,7 @@ describe("Slide Library application", () => {
 
     await screen.findByText(revenueSlide.title);
     fireEvent.click(
-      screen.getByRole("button", { name: `Add ${revenueSlide.title} to favorites` })
+      screen.getByRole("button", { name: `Добавить в избранное: ${revenueSlide.title}` })
     );
 
     expect(globalThis.localStorage.getItem("slidebrary.favorite-slide-ids")).toContain(
@@ -85,7 +100,7 @@ describe("Slide Library application", () => {
     expect(screen.getByText(revenueSlide.title)).toBeInTheDocument();
 
     fireEvent.click(
-      screen.getByRole("button", { name: `Remove ${revenueSlide.title} from favorites` })
+      screen.getByRole("button", { name: `Убрать из избранного: ${revenueSlide.title}` })
     );
     expect(screen.getByRole("heading", { name: "Избранное пока пусто" })).toBeInTheDocument();
   });
@@ -281,8 +296,10 @@ describe("Slide Library application", () => {
 
     render(<App api={api} powerPointService={createAvailablePowerPointService()} />);
 
-    expect(screen.getByRole("status", { name: "Loading slide library" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Slide catalog" })).toHaveAttribute(
+    expect(
+      screen.getByRole("status", { name: "Загрузка библиотеки слайдов" })
+    ).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Каталог слайдов" })).toHaveAttribute(
       "aria-busy",
       "true"
     );
@@ -293,7 +310,9 @@ describe("Slide Library application", () => {
     });
 
     expect(await screen.findByText(revenueSlide.title)).toBeInTheDocument();
-    expect(screen.queryByRole("status", { name: "Loading slide library" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("status", { name: "Загрузка библиотеки слайдов" })
+    ).not.toBeInTheDocument();
   });
 
   it("renders catalog metadata and opens an enlarged, keyboard-dismissable details view", async () => {
@@ -303,22 +322,21 @@ describe("Slide Library application", () => {
 
     expect(await screen.findByText(revenueSlide.title)).toBeInTheDocument();
     const card = screen.getByRole("article");
-    expect(within(card).getByText("Finance")).toBeInTheDocument();
-    expect(within(card).getByText("Approved")).toBeInTheDocument();
+    expect(within(card).getByText("Финансы")).toBeInTheDocument();
+    expect(within(card).getByText("Одобрено")).toBeInTheDocument();
     expect(screen.getByText("1", { selector: "strong" }).parentElement).toHaveTextContent(
-      "1 slide"
+      "1 слайд"
     );
-    expect(screen.getByRole("img", { name: `${revenueSlide.title} slide preview` })).toHaveAttribute(
-      "src",
-      "/api/slides/revenue-overview/preview"
-    );
+    expect(
+      screen.getByRole("img", { name: `Предпросмотр слайда: ${revenueSlide.title}` })
+    ).toHaveAttribute("src", "/api/slides/revenue-overview/preview");
 
     fireEvent.click(
-      screen.getByRole("button", { name: `View details for ${revenueSlide.title}` })
+      screen.getByRole("button", { name: `Открыть сведения: ${revenueSlide.title}` })
     );
 
     const dialog = screen.getByRole("dialog", { name: revenueSlide.title });
-    expect(within(dialog).getByText("Version 2.4")).toBeInTheDocument();
+    expect(within(dialog).getByText("Версия 2.4")).toBeInTheDocument();
     expect(within(dialog).getByText("Finance Operations")).toBeInTheDocument();
     expect(within(dialog).getByText("executive")).toBeInTheDocument();
 
@@ -340,7 +358,7 @@ describe("Slide Library application", () => {
     await screen.findByText(revenueSlide.title);
     expect(api.listSlides).toHaveBeenCalledTimes(1);
 
-    fireEvent.change(screen.getByRole("searchbox", { name: "Search slides" }), {
+    fireEvent.change(screen.getByRole("searchbox", { name: "Поиск слайдов" }), {
       target: { value: "  revenue  " }
     });
 
@@ -369,8 +387,8 @@ describe("Slide Library application", () => {
     );
 
     await screen.findByText(revenueSlide.title);
-    const category = screen.getByRole("combobox", { name: "Category" });
-    const status = screen.getByRole("combobox", { name: "Status" });
+    const category = screen.getByRole("combobox", { name: "Категория" });
+    const status = screen.getByRole("combobox", { name: "Статус" });
 
     fireEvent.change(category, { target: { value: "Finance" } });
     await waitFor(() =>
@@ -388,7 +406,7 @@ describe("Slide Library application", () => {
       )
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Reset filters" }));
+    fireEvent.click(screen.getByRole("button", { name: "Сбросить фильтры" }));
     expect(category).toHaveValue("");
     expect(status).toHaveValue("approved");
     await waitFor(() =>
@@ -421,7 +439,7 @@ describe("Slide Library application", () => {
       "true"
     );
 
-    fireEvent.change(screen.getByRole("combobox", { name: "Sort slides" }), {
+    fireEvent.change(screen.getByRole("combobox", { name: "Сортировка слайдов" }), {
       target: { value: "title-asc" }
     });
 
@@ -439,8 +457,8 @@ describe("Slide Library application", () => {
 
     render(<App api={api} powerPointService={createAvailablePowerPointService()} />);
 
-    expect(await screen.findByRole("heading", { name: "No slides found" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Clear search and filters" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Слайды не найдены" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Очистить поиск и фильтры" })).toBeInTheDocument();
   });
 
   it("distinguishes a genuinely empty library from filtered no-results", async () => {
@@ -448,10 +466,10 @@ describe("Slide Library application", () => {
 
     render(<App api={api} powerPointService={createAvailablePowerPointService()} />);
 
-    expect(await screen.findByRole("heading", { name: "The library is empty" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Библиотека пока пуста" })).toBeInTheDocument();
     expect(
-      within(screen.getByRole("region", { name: "Slide catalog" })).getByRole("button", {
-        name: "Refresh library"
+      within(screen.getByRole("region", { name: "Каталог слайдов" })).getByRole("button", {
+        name: "Обновить библиотеку"
       })
     ).toBeInTheDocument();
   });
@@ -461,7 +479,7 @@ describe("Slide Library application", () => {
     const api = createApi(async () => {
       attempts += 1;
       if (attempts === 1) {
-        throw new Error("The catalog API is offline.");
+        throw new Error("API каталога недоступен.");
       }
       return catalogResponse;
     });
@@ -469,9 +487,9 @@ describe("Slide Library application", () => {
     render(<App api={api} powerPointService={createAvailablePowerPointService()} />);
 
     const alert = await screen.findByRole("alert");
-    expect(within(alert).getByText("The catalog API is offline.")).toBeInTheDocument();
+    expect(within(alert).getByText("API каталога недоступен.")).toBeInTheDocument();
 
-    fireEvent.click(within(alert).getByRole("button", { name: "Retry" }));
+    fireEvent.click(within(alert).getByRole("button", { name: "Повторить" }));
     expect(await screen.findByText(revenueSlide.title)).toBeInTheDocument();
     expect(api.listSlides).toHaveBeenCalledTimes(2);
   });
@@ -493,23 +511,29 @@ describe("Slide Library application", () => {
     );
 
     const insertRevenue = await screen.findByRole("button", {
-      name: `Insert ${revenueSlide.title}`
+      name: `Добавить в PowerPoint: ${revenueSlide.title}`
     });
     fireEvent.click(insertRevenue);
 
     expect(insertSlide).toHaveBeenCalledWith(revenueSlide.id);
     expect(
-      screen.getByRole("button", { name: `Inserting ${revenueSlide.title}` })
+      screen.getByRole("button", { name: `Добавляется в PowerPoint: ${revenueSlide.title}` })
     ).toBeDisabled();
-    expect(screen.getByRole("button", { name: `Insert ${strategySlide.title}` })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: `Добавить в PowerPoint: ${strategySlide.title}` })
+    ).toBeDisabled();
 
     await act(async () => {
       insertion.resolve(undefined);
       await insertion.promise;
     });
 
-    expect(await screen.findByText("Slide inserted successfully")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: `Insert ${revenueSlide.title}` })).toBeEnabled();
+    expect(
+      await screen.findByText("Слайд успешно добавлен в презентацию.")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: `Добавить в PowerPoint: ${revenueSlide.title}` })
+    ).toBeEnabled();
   });
 
   it("selects and inserts multiple slides in the visible catalog order", async () => {
@@ -524,10 +548,10 @@ describe("Slide Library application", () => {
 
     await screen.findByText(revenueSlide.title);
     fireEvent.click(
-      screen.getByRole("button", { name: `Select ${strategySlide.title}` })
+      screen.getByRole("button", { name: `Выбрать: ${strategySlide.title}` })
     );
     fireEvent.click(
-      screen.getByRole("button", { name: `Select ${revenueSlide.title}` })
+      screen.getByRole("button", { name: `Выбрать: ${revenueSlide.title}` })
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Добавить выбранные (2)" }));
@@ -538,14 +562,16 @@ describe("Slide Library application", () => {
         strategySlide.id
       ])
     );
-    expect(await screen.findByText("2 slides inserted successfully")).toBeInTheDocument();
+    expect(
+      await screen.findByText("2 слайда успешно добавлено в презентацию.")
+    ).toBeInTheDocument();
     expect(screen.queryByLabelText("Выбранные слайды")).not.toBeInTheDocument();
   });
 
   it("reports insertion failures and restores the insert controls", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     const insertSlide = vi.fn(async () => {
-      throw new Error("The PPTX file could not be downloaded.");
+      throw new Error("Не удалось скачать файл PPTX.");
     });
 
     render(
@@ -556,15 +582,17 @@ describe("Slide Library application", () => {
     );
 
     const insertButton = await screen.findByRole("button", {
-      name: `Insert ${revenueSlide.title}`
+      name: `Добавить в PowerPoint: ${revenueSlide.title}`
     });
     fireEvent.click(insertButton);
 
     const notification = await screen.findByRole("alert");
     expect(notification).toHaveTextContent(
-      "Could not insert slide. The PPTX file could not be downloaded."
+      "Не удалось добавить слайд. Не удалось скачать файл PPTX."
     );
-    expect(screen.getByRole("button", { name: `Insert ${revenueSlide.title}` })).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: `Добавить в PowerPoint: ${revenueSlide.title}` })
+    ).toBeEnabled();
   });
 
   it("keeps browsing functional and gives a friendly insert explanation outside PowerPoint", async () => {
@@ -573,12 +601,12 @@ describe("Slide Library application", () => {
     render(<App api={api} powerPointService={new BrowserPowerPointService()} />);
 
     await screen.findByText(revenueSlide.title);
-    const integrationStatus = screen.getByLabelText("PowerPoint integration status");
-    expect(within(integrationStatus).getByText("Catalog preview mode")).toBeInTheDocument();
+    const integrationStatus = screen.getByLabelText("Состояние интеграции с PowerPoint");
+    expect(within(integrationStatus).getByText("Режим просмотра каталога")).toBeInTheDocument();
     expect(within(integrationStatus).getByText(BROWSER_POWERPOINT_MESSAGE)).toBeInTheDocument();
 
     fireEvent.click(
-      screen.getByRole("button", { name: `Insert ${revenueSlide.title}` })
+      screen.getByRole("button", { name: `Добавить в PowerPoint: ${revenueSlide.title}` })
     );
 
     const notification = await screen.findByRole("status");

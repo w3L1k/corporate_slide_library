@@ -1,4 +1,5 @@
 import type { SlideLibraryItem } from "@slide-library/shared";
+import { formatCategory } from "./formatCategory";
 import { formatUpdatedDate } from "./formatDate";
 import { PreviewImage } from "./PreviewImage";
 import { StatusBadge } from "./StatusBadge";
@@ -37,7 +38,7 @@ export function SlideCard({
         className="slide-card__select"
         type="button"
         onClick={onToggleSelection}
-        aria-label={`${selected ? "Deselect" : "Select"} ${item.title}`}
+        aria-label={`${selected ? "Снять выбор" : "Выбрать"}: ${item.title}`}
         aria-pressed={selected}
         title={selected ? "Снять выбор" : "Выбрать слайд"}
       >
@@ -50,9 +51,9 @@ export function SlideCard({
         className="slide-card__favorite"
         type="button"
         onClick={onToggleFavorite}
-        aria-label={`${favorite ? "Remove" : "Add"} ${item.title} ${
-          favorite ? "from" : "to"
-        } favorites`}
+        aria-label={`${
+          favorite ? "Убрать из избранного" : "Добавить в избранное"
+        }: ${item.title}`}
         aria-pressed={favorite}
         title={favorite ? "Убрать из избранного" : "Добавить в избранное"}
       >
@@ -64,11 +65,11 @@ export function SlideCard({
         className="slide-card__preview"
         type="button"
         onClick={onOpen}
-        aria-label={`View details for ${item.title}`}
+        aria-label={`Открыть сведения: ${item.title}`}
       >
         <PreviewImage src={previewUrl} title={item.title} />
         <span className="slide-card__preview-action" aria-hidden="true">
-          Enlarge
+          Увеличить
         </span>
       </button>
       <div className="slide-card__body">
@@ -83,24 +84,28 @@ export function SlideCard({
           </button>
           <StatusBadge status={item.status} />
         </div>
-        <p className="slide-card__category">{item.category}</p>
+        <p className="slide-card__category">{formatCategory(item.category)}</p>
         <div className="slide-card__footer">
-          <span className="slide-card__updated">Updated {formatUpdatedDate(item.updatedAt)}</span>
+          <span className="slide-card__updated">
+            Обновлено {formatUpdatedDate(item.updatedAt)}
+          </span>
           <button
             className="button button--compact button--primary"
             type="button"
             onClick={onInsert}
             disabled={insertionBlocked}
-            aria-label={`${inserting ? "Inserting" : "Insert"} ${item.title}`}
+            aria-label={`${
+              inserting ? "Добавляется в PowerPoint" : "Добавить в PowerPoint"
+            }: ${item.title}`}
           >
             {inserting ? (
               <>
                 <span className="spinner" aria-hidden="true" />
-                Inserting…
+                Добавляем…
               </>
             ) : (
               <>
-                Insert
+                Добавить
                 <svg viewBox="0 0 16 16" aria-hidden="true">
                   <path d="M3 8h9M9 4l4 4-4 4" />
                 </svg>

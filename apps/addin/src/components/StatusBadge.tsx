@@ -1,9 +1,9 @@
 import type { SlideStatus } from "@slide-library/shared";
 
 const STATUS_LABELS: Record<SlideStatus, string> = {
-  approved: "Approved",
-  draft: "Draft",
-  deprecated: "Deprecated"
+  approved: "Одобрено",
+  draft: "Черновик",
+  deprecated: "Устарело"
 };
 
 interface StatusBadgeProps {

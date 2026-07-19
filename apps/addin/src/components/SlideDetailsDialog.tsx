@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import type { SlideLibraryItem } from "@slide-library/shared";
+import { formatCategory } from "./formatCategory";
 import { formatUpdatedDate } from "./formatDate";
 import { PreviewImage } from "./PreviewImage";
 import { StatusBadge } from "./StatusBadge";
@@ -95,7 +96,7 @@ export function SlideDetailsDialog({
       >
         <header className="detail-dialog__header">
           <div>
-            <span className="eyebrow">Slide details</span>
+            <span className="eyebrow">Сведения о слайде</span>
             <h2 id="detail-title">{item.title}</h2>
           </div>
           <button
@@ -103,7 +104,7 @@ export function SlideDetailsDialog({
             className="icon-button"
             type="button"
             onClick={onClose}
-            aria-label="Close slide details"
+            aria-label="Закрыть сведения о слайде"
           >
             <svg viewBox="0 0 20 20" aria-hidden="true">
               <path d="M5 5l10 10M15 5L5 15" />
@@ -116,49 +117,49 @@ export function SlideDetailsDialog({
             <PreviewImage src={previewUrl} title={item.title} eager />
           </div>
 
-          <section className="detail-dialog__info" aria-label="Slide metadata">
+          <section className="detail-dialog__info" aria-label="Метаданные слайда">
             <div className="detail-dialog__status-row">
               <StatusBadge status={item.status} />
-              <span>Version {item.version}</span>
+              <span>Версия {item.version}</span>
             </div>
             {item.description ? <p id="detail-description">{item.description}</p> : null}
 
             <dl className="metadata-grid">
               <div>
-                <dt>Category</dt>
-                <dd>{item.category}</dd>
+                <dt>Категория</dt>
+                <dd>{formatCategory(item.category)}</dd>
               </div>
               <div>
-                <dt>Updated</dt>
+                <dt>Обновлено</dt>
                 <dd>{formatUpdatedDate(item.updatedAt)}</dd>
               </div>
               {item.department ? (
                 <div>
-                  <dt>Department</dt>
+                  <dt>Подразделение</dt>
                   <dd>{item.department}</dd>
                 </div>
               ) : null}
               {item.owner ? (
                 <div>
-                  <dt>Content owner</dt>
+                  <dt>Владелец контента</dt>
                   <dd>{item.owner}</dd>
                 </div>
               ) : null}
               {item.author ? (
                 <div>
-                  <dt>Author</dt>
+                  <dt>Автор</dt>
                   <dd>{item.author}</dd>
                 </div>
               ) : null}
               {item.language ? (
                 <div>
-                  <dt>Language</dt>
+                  <dt>Язык</dt>
                   <dd>{item.language}</dd>
                 </div>
               ) : null}
             </dl>
 
-            <div className="tag-list" aria-label="Tags">
+            <div className="tag-list" aria-label="Теги">
               {item.tags.map((tag) => (
                 <span key={tag}>{tag}</span>
               ))}
@@ -168,7 +169,7 @@ export function SlideDetailsDialog({
 
         <footer className="detail-dialog__footer">
           <button className="button button--secondary" type="button" onClick={onClose}>
-            Close
+            Закрыть
           </button>
           <button
             className="button button--primary button--insert"
@@ -179,7 +180,7 @@ export function SlideDetailsDialog({
             {inserting ? (
               <>
                 <span className="spinner" aria-hidden="true" />
-                Inserting…
+                Добавляем…
               </>
             ) : (
               <>
@@ -187,7 +188,7 @@ export function SlideDetailsDialog({
                   <rect x="3" y="4" width="14" height="11" rx="1.5" />
                   <path d="M10 7v5M7.5 9.5h5M7 17h6" />
                 </svg>
-                Insert slide
+                Добавить слайд
               </>
             )}
           </button>

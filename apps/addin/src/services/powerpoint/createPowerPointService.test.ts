@@ -114,7 +114,7 @@ describe("createPowerPointService", () => {
       "1.2"
     );
     expect(service).toBeInstanceOf(BrowserPowerPointService);
-    expect(service.getUnavailableReason()).toMatch(/does not support inserting slides/i);
+    expect(service.getUnavailableReason()).toMatch(/не поддерживает вставку слайдов/i);
   });
 
   it("creates the real Office service only for a supported PowerPoint host", async () => {
@@ -174,6 +174,6 @@ describe("createPowerPointService", () => {
     });
 
     expect(service).toBeInstanceOf(BrowserPowerPointService);
-    expect(service.getUnavailableReason()).toMatch(/update PowerPoint/i);
+    expect(service.getUnavailableReason()).toMatch(/обновите PowerPoint/i);
   });
 });

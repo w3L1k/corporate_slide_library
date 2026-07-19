@@ -15,9 +15,9 @@ const IMAGE_COERCION_VERSION = "1.1";
 const SVG_COERCION_VERSION = "1.2";
 const DEFAULT_READY_TIMEOUT_MS = 1_500;
 const UNSUPPORTED_POWERPOINT_MESSAGE =
-  "This version of PowerPoint does not support inserting slides from the library. Update PowerPoint and try again.";
+  "Эта версия PowerPoint не поддерживает вставку слайдов из библиотеки. Обновите PowerPoint и повторите попытку.";
 const POWERPOINT_INITIALIZATION_MESSAGE =
-  "PowerPoint integration could not be initialized. Close and reopen the add-in, then try again.";
+  "Не удалось подключиться к PowerPoint. Закройте и снова откройте надстройку.";
 
 export interface OfficeReadyInfoRuntime {
   host?: string | null;
@@ -130,7 +130,8 @@ const createImageInsertionRuntime = (
 
           reject(
             new Error(
-              result.error?.message?.trim() || "PowerPoint could not insert the selected image."
+              result.error?.message?.trim() ||
+                "PowerPoint не смог добавить выбранное изображение."
             )
           );
         });

@@ -4,9 +4,9 @@ import { arrayBufferToBase64 } from "./arrayBufferToBase64";
 import { PowerPointUnavailableError, type PowerPointService } from "./types";
 
 const IMAGE_INSERTION_UNAVAILABLE_MESSAGE =
-  "This version of PowerPoint does not support inserting images from the personal library.";
+  "Эта версия PowerPoint не поддерживает вставку изображений из личной библиотеки.";
 const SVG_INSERTION_UNAVAILABLE_MESSAGE =
-  "This version of PowerPoint does not support SVG insertion. Upload a PNG version of the image or update PowerPoint.";
+  "Эта версия PowerPoint не поддерживает SVG. Загрузите PNG-версию изображения или обновите PowerPoint.";
 const RASTER_IMAGE_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 
 export interface PresentationRuntime {
@@ -92,7 +92,7 @@ export class OfficePowerPointService implements PowerPointService {
     }
 
     if (!RASTER_IMAGE_MIME_TYPES.has(asset.mimeType)) {
-      throw new Error(`Unsupported personal image format: ${asset.mimeType}`);
+      throw new Error(`Неподдерживаемый формат изображения: ${asset.mimeType}`);
     }
     if (!this.imageInsertionRuntime) {
       throw new PowerPointUnavailableError(IMAGE_INSERTION_UNAVAILABLE_MESSAGE);

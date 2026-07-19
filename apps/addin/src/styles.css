@@ -119,7 +119,7 @@ svg {
   gap: 9px;
 }
 
-.profile-button {
+.brand-mark {
   display: grid;
   width: 32px;
   height: 32px;
@@ -132,7 +132,7 @@ svg {
   background: #fff;
 }
 
-.profile-button svg {
+.brand-mark svg {
   width: 20px;
   height: 20px;
   fill: none;
@@ -350,18 +350,9 @@ main {
   background: #f4f7fb;
 }
 
-.library-sidebar__item:disabled {
-  cursor: default;
-}
-
 .library-sidebar__item--active strong {
   color: var(--ink);
   font-weight: 680;
-}
-
-.library-sidebar__item--muted {
-  margin-top: auto;
-  color: #a4aab6;
 }
 
 .library-sidebar--collapsed .library-sidebar__menu {

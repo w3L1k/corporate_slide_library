@@ -71,7 +71,7 @@ The current state is tracked in [FINAL_CHECKLIST.md](FINAL_CHECKLIST.md).
 - There are no favorites, recently used items, recommendations, collections, usage analytics, insertion analytics, or offline mode.
 - There is no version history in the product. `version` and `updatedAt` are owner-maintained metadata fields, not automatically generated revision records.
 - There is one library root per server process and no UI for switching departments or libraries.
-- The UI and demo metadata are English-only; localization is not implemented.
+- The task-pane interface is localized in Russian. Demo slide titles, descriptions, and governance metadata intentionally remain in their source language, and there is no runtime language switch.
 - Health reports that the HTTP process is responsive. It is not a deep health check of every registered asset or the PowerPoint host.
 
 ### Operations and reliability

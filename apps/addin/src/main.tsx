@@ -7,7 +7,7 @@ import { createPowerPointService } from "./services/powerpoint";
 const rootElement = document.getElementById("root");
 
 if (!rootElement) {
-  throw new Error("The application root element was not found.");
+  throw new Error("Не найден корневой элемент приложения.");
 }
 
 const root = createRoot(rootElement);

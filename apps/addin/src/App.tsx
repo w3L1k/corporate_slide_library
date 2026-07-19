@@ -6,6 +6,7 @@ import type {
   SlideStatus
 } from "@slide-library/shared";
 import { PersonalLibrary } from "./components/PersonalLibrary";
+import { formatCategory } from "./components/formatCategory";
 import { SkeletonCatalog } from "./components/SkeletonCatalog";
 import { SlideCard } from "./components/SlideCard";
 import { SlideDetailsDialog } from "./components/SlideDetailsDialog";
@@ -34,6 +35,31 @@ const DEFAULT_STATUS: StatusFilter = "approved";
 const DEFAULT_DEBOUNCE_MS = 300;
 const MULTI_INSERT_ID = "__multiple__";
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "slidebrary.sidebar-collapsed";
+const PERSONAL_KIND_TITLES: Record<PersonalAssetKind, string> = {
+  presentation: "Презентации",
+  photo: "Фотографии",
+  illustration: "Иллюстрации",
+  logo: "Логотипы"
+};
+
+const getSlideNoun = (count: number): string => {
+  const absoluteCount = Math.abs(count);
+  const lastTwoDigits = absoluteCount % 100;
+  const lastDigit = absoluteCount % 10;
+
+  if (lastTwoDigits >= 11 && lastTwoDigits <= 14) {
+    return "слайдов";
+  }
+  if (lastDigit === 1) {
+    return "слайд";
+  }
+  if (lastDigit >= 2 && lastDigit <= 4) {
+    return "слайда";
+  }
+  return "слайдов";
+};
+
+const formatSlideCount = (count: number): string => `${count} ${getSlideNoun(count)}`;
 
 const readSidebarCollapsed = (): boolean => {
   try {
@@ -66,7 +92,7 @@ const getErrorMessage = (error: unknown): string => {
     return error.message;
   }
 
-  return "The slide library could not be loaded.";
+  return "Не удалось загрузить библиотеку слайдов.";
 };
 
 export function App({
@@ -168,7 +194,7 @@ export function App({
       setInsertingId(item.id);
       try {
         await powerPointService.insertSlide(item.id);
-        setToast({ kind: "success", text: "Slide inserted successfully" });
+        setToast({ kind: "success", text: "Слайд успешно добавлен в презентацию." });
       } catch (error: unknown) {
         if (import.meta.env.DEV && !(error instanceof PowerPointUnavailableError)) {
           console.error("Slide insertion failed", error);
@@ -177,7 +203,7 @@ export function App({
         const message =
           error instanceof PowerPointUnavailableError
             ? error.message
-            : `Could not insert slide. ${getErrorMessage(error)}`;
+            : `Не удалось добавить слайд. ${getErrorMessage(error)}`;
         setToast({ kind: error instanceof PowerPointUnavailableError ? "info" : "error", text: message });
       } finally {
         setInsertingId(null);
@@ -187,17 +213,20 @@ export function App({
   );
 
   const currentSubtitle = useMemo(() => {
+    if (libraryScope === "personal") {
+      return `Личная библиотека: ${PERSONAL_KIND_TITLES[personalKind].toLowerCase()}`;
+    }
     if (status === "approved") {
-      return "Approved content, ready to use";
+      return "Одобренные материалы, готовые к использованию";
     }
     if (status === "draft") {
-      return "Draft content for review";
+      return "Черновики для проверки";
     }
     if (status === "deprecated") {
-      return "Deprecated content — use with care";
+      return "Устаревшие материалы";
     }
-    return "All corporate content";
-  }, [status]);
+    return "Все корпоративные материалы";
+  }, [libraryScope, personalKind, status]);
 
   const visibleItems = useMemo(() => {
     const items = [...(catalog.response?.items ?? [])];
@@ -245,9 +274,7 @@ export function App({
       setSelectedSlideIds(new Set());
       setToast({
         kind: "success",
-        text: `${selectedItems.length} ${
-          selectedItems.length === 1 ? "slide" : "slides"
-        } inserted successfully`
+        text: `${formatSlideCount(selectedItems.length)} успешно добавлено в презентацию.`
       });
     } catch (error: unknown) {
       if (import.meta.env.DEV && !(error instanceof PowerPointUnavailableError)) {
@@ -257,7 +284,7 @@ export function App({
       const message =
         error instanceof PowerPointUnavailableError
           ? error.message
-          : `Could not insert selected slides. ${getErrorMessage(error)}`;
+          : `Не удалось добавить выбранные слайды. ${getErrorMessage(error)}`;
       setToast({
         kind: error instanceof PowerPointUnavailableError ? "info" : "error",
         text: message
@@ -271,12 +298,12 @@ export function App({
     <div className="app-shell">
       <header className="app-header">
         <div className="brand">
-          <button className="profile-button" type="button" aria-label="Открыть профиль">
+          <span className="brand-mark" aria-hidden="true">
             <svg viewBox="0 0 24 24">
-              <circle cx="12" cy="8" r="3.5" />
-              <path d="M5.5 19c.8-3.2 3-5 6.5-5s5.7 1.8 6.5 5" />
+              <rect x="4" y="5" width="16" height="12" rx="2" />
+              <path d="M8 9h8M8 12h5M9 20h6" />
             </svg>
-          </button>
+          </span>
           <h1>Slidebrary</h1>
         </div>
         <div className="header-actions">
@@ -285,8 +312,8 @@ export function App({
             className="icon-button icon-button--refresh"
             type="button"
             onClick={() => setRefreshKey((value) => value + 1)}
-            aria-label="Refresh library"
-            title="Refresh library"
+            aria-label="Обновить библиотеку"
+            title="Обновить библиотеку"
             disabled={catalog.loading}
           >
             <svg className={catalog.loading ? "is-spinning" : ""} viewBox="0 0 20 20" aria-hidden="true">
@@ -358,25 +385,22 @@ export function App({
               </button>
             </div>
             <div className="library-sidebar__menu" id="library-sidebar-menu">
-              <button
-                className={`library-sidebar__item ${
-                  libraryScope === "public" && activeSection === "favorites"
-                    ? "library-sidebar__item--active"
-                    : ""
-                }`}
-                type="button"
-                onClick={() => setActiveSection("favorites")}
-                disabled={libraryScope === "personal"}
-                title="Избранное"
-                aria-current={
-                  libraryScope === "public" && activeSection === "favorites"
-                    ? "page"
-                    : undefined
-                }
-              >
-                <span aria-hidden="true">♡</span>
-                <strong>Избранное</strong>
-              </button>
+              {libraryScope === "public" ? (
+                <button
+                  className={`library-sidebar__item ${
+                    activeSection === "favorites"
+                      ? "library-sidebar__item--active"
+                      : ""
+                  }`}
+                  type="button"
+                  onClick={() => setActiveSection("favorites")}
+                  title="Избранное"
+                  aria-current={activeSection === "favorites" ? "page" : undefined}
+                >
+                  <span aria-hidden="true">♡</span>
+                  <strong>Избранное</strong>
+                </button>
+              ) : null}
               <button
                 className={`library-sidebar__item ${
                   (libraryScope === "public" && activeSection === "presentations") ||
@@ -446,15 +470,6 @@ export function App({
                 <strong>Иллюстрации</strong>
               </button>
               <button
-                className="library-sidebar__item"
-                type="button"
-                title="Иконки"
-                disabled
-              >
-                <span aria-hidden="true">◎</span>
-                <strong>Иконки</strong>
-              </button>
-              <button
                 className={`library-sidebar__item ${
                   libraryScope === "personal" && personalKind === "logo"
                     ? "library-sidebar__item--active"
@@ -475,33 +490,6 @@ export function App({
                 <span aria-hidden="true">A</span>
                 <strong>Логотипы</strong>
               </button>
-              <button
-                className="library-sidebar__item"
-                type="button"
-                title="Шаблоны"
-                disabled
-              >
-                <span aria-hidden="true">⊞</span>
-                <strong>Шаблоны</strong>
-              </button>
-              <button
-                className="library-sidebar__item"
-                type="button"
-                title="Продукты"
-                disabled
-              >
-                <span aria-hidden="true">✦</span>
-                <strong>Продукты</strong>
-              </button>
-              <button
-                className="library-sidebar__item library-sidebar__item--muted"
-                type="button"
-                title="ИИ-ассистент"
-                disabled
-              >
-                <span aria-hidden="true">✧</span>
-                <strong>ИИ-ассистент</strong>
-              </button>
             </div>
           </aside>
 
@@ -519,7 +507,7 @@ export function App({
         {libraryScope === "public" ? (
           <>
         {powerPointUnavailableReason ? (
-          <aside className="environment-notice" aria-label="PowerPoint integration status">
+          <aside className="environment-notice" aria-label="Состояние интеграции с PowerPoint">
             <span className="environment-notice__icon" aria-hidden="true">
               <svg viewBox="0 0 20 20">
                 <circle cx="10" cy="10" r="7.5" />
@@ -527,35 +515,35 @@ export function App({
               </svg>
             </span>
             <div>
-              <strong>Catalog preview mode</strong>
+              <strong>Режим просмотра каталога</strong>
               <p>{powerPointUnavailableReason}</p>
             </div>
           </aside>
         ) : null}
 
-        <section className="catalog-controls" aria-label="Find slides">
+        <section className="catalog-controls" aria-label="Поиск слайдов">
           <div className="search-field">
             <svg viewBox="0 0 20 20" aria-hidden="true">
               <circle cx="9" cy="9" r="5.5" />
               <path d="M13 13l4 4" />
             </svg>
             <label className="sr-only" htmlFor="slide-search">
-              Search slides
+              Поиск слайдов
             </label>
             <input
               id="slide-search"
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search slides…"
+              placeholder="Найти слайды…"
               autoComplete="off"
             />
             {query ? (
               <button
                 type="button"
                 onClick={() => setQuery("")}
-                aria-label="Clear search"
-                title="Clear search"
+                aria-label="Очистить поиск"
+                title="Очистить поиск"
               >
                 <svg viewBox="0 0 16 16" aria-hidden="true">
                   <path d="M4 4l8 8M12 4l-8 8" />
@@ -566,13 +554,13 @@ export function App({
 
           <div className="filter-row">
             <label>
-              <span>Category</span>
+              <span>Категория</span>
               <span className="select-wrap">
                 <select value={category} onChange={(event) => setCategory(event.target.value)}>
-                  <option value="">All categories</option>
+                  <option value="">Все категории</option>
                   {categories.map((availableCategory) => (
                     <option value={availableCategory} key={availableCategory}>
-                      {availableCategory}
+                      {formatCategory(availableCategory)}
                     </option>
                   ))}
                 </select>
@@ -583,16 +571,16 @@ export function App({
             </label>
 
             <label>
-              <span>Status</span>
+              <span>Статус</span>
               <span className="select-wrap">
                 <select
                   value={status}
                   onChange={(event) => setStatus(event.target.value as StatusFilter)}
                 >
-                  <option value="approved">Approved</option>
-                  <option value="draft">Draft</option>
-                  <option value="deprecated">Deprecated</option>
-                  <option value="">All statuses</option>
+                  <option value="approved">Одобрено</option>
+                  <option value="draft">Черновик</option>
+                  <option value="deprecated">Устарело</option>
+                  <option value="">Все статусы</option>
                 </select>
                 <svg viewBox="0 0 16 16" aria-hidden="true">
                   <path d="M4 6l4 4 4-4" />
@@ -606,21 +594,21 @@ export function App({
               {catalog.response ? (
                 <>
                   <strong>{catalog.response.total}</strong>{" "}
-                  {catalog.response.total === 1 ? "slide" : "slides"}
+                  {getSlideNoun(catalog.response.total)}
                 </>
               ) : catalog.loading ? (
-                "Loading…"
+                "Загрузка…"
               ) : (
                 "—"
               )}
             </p>
             <div className="results-toolbar__actions">
               <label className="sort-control">
-                <span className="sr-only">Sort slides</span>
+                <span className="sr-only">Сортировка слайдов</span>
                 <select
                   value={sortOrder}
                   onChange={(event) => setSortOrder(event.target.value as SortOrder)}
-                  aria-label="Sort slides"
+                  aria-label="Сортировка слайдов"
                 >
                   <option value="updated-desc">Сначала новые</option>
                   <option value="title-asc">По названию</option>
@@ -662,7 +650,7 @@ export function App({
                 onClick={resetFilters}
                 disabled={!hasActiveFilters}
               >
-                Reset filters
+                Сбросить фильтры
               </button>
             </div>
           </div>
@@ -672,7 +660,7 @@ export function App({
           <section className="selection-toolbar" aria-label="Выбранные слайды">
             <div>
               <strong>Выбрано: {selectedItems.length}</strong>
-              <span>Слайды будут добавлены в указанном порядке.</span>
+              <span>Слайды будут добавлены в порядке каталога.</span>
             </div>
             <div className="selection-toolbar__actions">
               <button
@@ -704,7 +692,7 @@ export function App({
 
         <section
           className="catalog-content"
-          aria-label="Slide catalog"
+          aria-label="Каталог слайдов"
           aria-busy={activeSection === "presentations" && catalog.loading}
         >
           {activeSection === "favorites" && favoriteItems.length === 0 ? (
@@ -757,10 +745,10 @@ export function App({
                   <path d="M12 3l9 16H3l9-16zM12 8v5M12 16.5v.5" />
                 </svg>
               </span>
-              <h2>Slide library unavailable</h2>
+              <h2>Библиотека слайдов недоступна</h2>
               <p>{catalog.error}</p>
               <button className="button button--primary" type="button" onClick={() => setRefreshKey((v) => v + 1)}>
-                Retry
+                Повторить
               </button>
             </div>
           ) : null}
@@ -773,10 +761,10 @@ export function App({
                   <path d="M8 9h8M8 13h5" />
                 </svg>
               </span>
-              <h2>The library is empty</h2>
-              <p>No slides are available yet. Refresh after content has been added.</p>
+              <h2>Библиотека пока пуста</h2>
+              <p>Слайды ещё не добавлены. Обновите каталог после публикации материалов.</p>
               <button className="button button--secondary" type="button" onClick={() => setRefreshKey((v) => v + 1)}>
-                Refresh library
+                Обновить библиотеку
               </button>
             </div>
           ) : null}
@@ -789,10 +777,10 @@ export function App({
                   <path d="M14.5 14.5L20 20M7.5 10h5" />
                 </svg>
               </span>
-              <h2>No slides found</h2>
-              <p>Try changing your search or filters.</p>
+              <h2>Слайды не найдены</h2>
+              <p>Измените поисковый запрос или фильтры.</p>
               <button className="button button--secondary" type="button" onClick={resetFilters}>
-                Clear search and filters
+                Очистить поиск и фильтры
               </button>
             </div>
           ) : null}

@@ -273,7 +273,7 @@ export function PersonalLibrary({
                 {item.mimeType.startsWith("image/") ? (
                   <img
                     src={api.getPersonalAssetFileUrl(item.id)}
-                    alt={`${item.title} preview`}
+                    alt={`Предпросмотр: ${item.title}`}
                   />
                 ) : (
                   <span aria-hidden="true">PPTX</span>

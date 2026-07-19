@@ -1,7 +1,7 @@
 import type { PersonalAsset } from "@slide-library/shared";
 
 export const BROWSER_POWERPOINT_MESSAGE =
-  "PowerPoint integration is available when the add-in is running inside Microsoft PowerPoint.";
+  "Вставка доступна, когда надстройка запущена внутри Microsoft PowerPoint.";
 
 export interface PowerPointService {
   isAvailable(): boolean;

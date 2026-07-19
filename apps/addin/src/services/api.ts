@@ -47,6 +47,31 @@ type FetchImplementation = typeof fetch;
 
 const trimTrailingSlash = (value: string): string => value.replace(/\/+$/, "");
 
+const API_ERROR_MESSAGES: Readonly<Record<string, string>> = {
+  CATALOG_INVALID: "Каталог повреждён или содержит некорректные данные.",
+  CATALOG_UNAVAILABLE: "Каталог временно недоступен.",
+  INVALID_PERSONAL_ASSET_ID: "Указан некорректный идентификатор личного материала.",
+  INVALID_PERSONAL_ASSET_KIND: "Выбран неподдерживаемый тип личного материала.",
+  INVALID_PERSONAL_ASSET_TITLE: "Проверьте название личного материала.",
+  INVALID_QUERY: "Проверьте параметры поиска.",
+  INVALID_SLIDE_ID: "Указан некорректный идентификатор слайда.",
+  INVALID_STATUS: "Выбран неподдерживаемый статус.",
+  PERSONAL_ASSET_FILE_REQUIRED: "Выберите файл для загрузки.",
+  PERSONAL_ASSET_NOT_FOUND: "Личный материал не найден.",
+  PERSONAL_ASSET_TOO_LARGE: "Размер личного материала превышает допустимый лимит.",
+  PREVIEW_NOT_FOUND: "Предпросмотр слайда не найден.",
+  REQUEST_TOO_LARGE: "Размер запроса превышает допустимый лимит.",
+  SLIDE_FILE_NOT_FOUND: "Файл слайда не найден.",
+  SLIDE_NOT_FOUND: "Слайд не найден.",
+  UNSAFE_CATALOG_ASSET: "Материал каталога не прошёл проверку безопасности.",
+  UNSUPPORTED_PERSONAL_ASSET: "Формат личного материала не поддерживается."
+};
+
+const getFallbackRequestError = (status: number): string =>
+  status >= 500
+    ? "Библиотека слайдов временно недоступна."
+    : "Не удалось выполнить запрос к библиотеке слайдов.";
+
 const isApiErrorResponse = (value: unknown): value is ApiErrorResponse => {
   if (typeof value !== "object" || value === null || !("error" in value)) {
     return false;
@@ -73,15 +98,14 @@ const readError = async (response: Response): Promise<ApiError> => {
   }
 
   if (isApiErrorResponse(payload)) {
-    return new ApiError(payload.error.message, response.status, payload.error.code);
+    return new ApiError(
+      API_ERROR_MESSAGES[payload.error.code] ?? getFallbackRequestError(response.status),
+      response.status,
+      payload.error.code
+    );
   }
 
-  return new ApiError(
-    response.status >= 500
-      ? "The slide library is temporarily unavailable."
-      : "The slide library request could not be completed.",
-    response.status
-  );
+  return new ApiError(getFallbackRequestError(response.status), response.status);
 };
 
 const requireOk = async (response: Response): Promise<Response> => {
@@ -153,7 +177,10 @@ export class HttpSlideLibraryApi implements SlideLibraryApi {
     const payload: unknown = await response.json();
 
     if (!isSlideListResponse(payload)) {
-      throw new ApiError("The slide library returned an invalid catalog response.", response.status);
+      throw new ApiError(
+        "Сервер вернул некорректный каталог слайдов.",
+        response.status
+      );
     }
 
     return payload;
@@ -199,7 +226,10 @@ export class HttpSlideLibraryApi implements SlideLibraryApi {
     );
     const payload: unknown = await response.json();
     if (!isPersonalAssetListResponse(payload)) {
-      throw new ApiError("The personal library returned an invalid response.", response.status);
+      throw new ApiError(
+        "Сервер вернул некорректный список личных материалов.",
+        response.status
+      );
     }
     return payload;
   }
