@@ -45,6 +45,7 @@ Checked items are present in the repository or were verified by direct static/pa
 ## Task-pane UX
 
 - [x] Catalog cards display preview, title, category, status, and updated date.
+- [x] The sidebar can collapse to an icon rail and persists the user's choice locally.
 - [x] Search is debounced and has a clear control.
 - [x] Category/status filters, result count, and reset control are implemented.
 - [x] Enlarged details dialog includes version and available governance metadata.
@@ -83,9 +84,9 @@ Checked items are present in the repository or were verified by direct static/pa
 - [x] `npm run validate-library` passes against all 12 final demo items.
 - [x] `npm run lint` passes in the final revision.
 - [x] `npm run typecheck` passes in the final revision, including tools.
-- [x] `npm run test` passes: 53 server tests and 38 add-in tests.
+- [x] `npm run test` passes: 53 server tests and 39 add-in tests.
 - [x] `npm run build` passes in the final revision.
-- [x] The aggregate `npm run check` passes: library validation, manifest validation, lint (0 errors), typecheck, 91 tests (53 server + 38 add-in), builds.
+- [x] The aggregate `npm run check` passes: library validation, manifest validation, lint (0 errors), typecheck, 92 tests (53 server + 39 add-in), builds.
 - [x] `npm audit` reports 0 known vulnerabilities for the installed dependency tree.
 
 ## Pilot readiness boundary

@@ -253,11 +253,19 @@ main {
   content: "";
 }
 
+.scope-tabs--sidebar-collapsed {
+  margin-left: 56px;
+}
+
 .workspace-layout {
   display: grid;
   grid-template-columns: 172px minmax(0, 1fr);
   gap: 12px;
   padding-top: 12px;
+}
+
+.workspace-layout--sidebar-collapsed {
+  grid-template-columns: 56px minmax(0, 1fr);
 }
 
 .library-sidebar {
@@ -267,12 +275,36 @@ main {
   border-right: 1px solid var(--border);
 }
 
+.library-sidebar--collapsed {
+  grid-template-columns: 1fr;
+  grid-template-rows: auto 1fr;
+}
+
 .library-sidebar__rail {
   display: flex;
   justify-content: center;
-  padding-top: 7px;
+  padding: 5px 0 2px;
+}
+
+.sidebar-toggle {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 8px;
   color: var(--ink-muted);
-  font-size: 25px;
+  background: transparent;
+  font-size: 24px;
+  line-height: 1;
+  transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease;
+}
+
+.sidebar-toggle:hover {
+  border-color: var(--border);
+  color: var(--accent-strong);
+  background: var(--surface);
 }
 
 .library-sidebar__menu {
@@ -330,6 +362,29 @@ main {
 .library-sidebar__item--muted {
   margin-top: auto;
   color: #a4aab6;
+}
+
+.library-sidebar--collapsed .library-sidebar__menu {
+  align-items: center;
+  padding: 4px 7px 0;
+}
+
+.library-sidebar--collapsed .library-sidebar__item {
+  width: 38px;
+  grid-template-columns: 1fr;
+  padding: 0;
+  place-items: center;
+  text-align: center;
+}
+
+.library-sidebar--collapsed .library-sidebar__item strong {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .workspace-content {
@@ -1662,8 +1717,20 @@ main {
     gap: 8px;
   }
 
+  .scope-tabs--sidebar-collapsed {
+    margin-left: 52px;
+  }
+
+  .workspace-layout--sidebar-collapsed {
+    grid-template-columns: 52px minmax(0, 1fr);
+  }
+
   .library-sidebar {
     grid-template-columns: 18px minmax(0, 1fr);
+  }
+
+  .library-sidebar--collapsed {
+    grid-template-columns: 1fr;
   }
 
   .library-sidebar__menu {

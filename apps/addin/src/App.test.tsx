@@ -26,6 +26,36 @@ const personalPhoto: PersonalAsset = {
 };
 
 describe("Slide Library application", () => {
+  it("collapses, persists, and restores the sidebar", async () => {
+    render(<App api={createApi()} powerPointService={createAvailablePowerPointService()} />);
+
+    await screen.findByText(revenueSlide.title);
+    const collapseButton = screen.getByRole("button", {
+      name: "Свернуть боковое меню"
+    });
+    expect(collapseButton).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.click(collapseButton);
+
+    const expandButton = screen.getByRole("button", {
+      name: "Развернуть боковое меню"
+    });
+    expect(expandButton).toHaveAttribute("aria-expanded", "false");
+    expect(globalThis.localStorage.getItem("slidebrary.sidebar-collapsed")).toBe(
+      "true"
+    );
+    expect(screen.getByRole("button", { name: "Презентации" })).toBeVisible();
+
+    fireEvent.click(expandButton);
+
+    expect(
+      screen.getByRole("button", { name: "Свернуть боковое меню" })
+    ).toHaveAttribute("aria-expanded", "true");
+    expect(globalThis.localStorage.getItem("slidebrary.sidebar-collapsed")).toBe(
+      "false"
+    );
+  });
+
   it("switches between presentations and the empty favorites section", async () => {
     render(<App api={createApi()} powerPointService={createAvailablePowerPointService()} />);
 

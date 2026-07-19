@@ -33,6 +33,15 @@ type SortOrder = "updated-desc" | "title-asc";
 const DEFAULT_STATUS: StatusFilter = "approved";
 const DEFAULT_DEBOUNCE_MS = 300;
 const MULTI_INSERT_ID = "__multiple__";
+const SIDEBAR_COLLAPSED_STORAGE_KEY = "slidebrary.sidebar-collapsed";
+
+const readSidebarCollapsed = (): boolean => {
+  try {
+    return globalThis.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
+};
 
 interface AppProps {
   api?: SlideLibraryApi;
@@ -69,6 +78,7 @@ export function App({
   const [activeSection, setActiveSection] = useState<LibrarySection>("presentations");
   const [libraryScope, setLibraryScope] = useState<LibraryScope>("public");
   const [personalKind, setPersonalKind] = useState<PersonalAssetKind>("presentation");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [sortOrder, setSortOrder] = useState<SortOrder>("updated-desc");
   const debouncedQuery = useDebouncedValue(query.trim(), searchDebounceMs);
@@ -83,6 +93,17 @@ export function App({
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const { favoriteIds, toggleFavorite } = useFavorites();
   const powerPointUnavailableReason = powerPointService.getUnavailableReason();
+
+  useEffect(() => {
+    try {
+      globalThis.localStorage.setItem(
+        SIDEBAR_COLLAPSED_STORAGE_KEY,
+        String(sidebarCollapsed)
+      );
+    } catch {
+      // A blocked storage API should not make the task pane unusable.
+    }
+  }, [sidebarCollapsed]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -276,7 +297,12 @@ export function App({
       </header>
 
       <main>
-        <nav className="scope-tabs" aria-label="Область библиотеки">
+        <nav
+          className={`scope-tabs ${
+            sidebarCollapsed ? "scope-tabs--sidebar-collapsed" : ""
+          }`}
+          aria-label="Область библиотеки"
+        >
           <button
             className={`scope-tabs__item ${
               libraryScope === "public" ? "scope-tabs__item--active" : ""
@@ -299,12 +325,39 @@ export function App({
           </button>
         </nav>
 
-        <div className="workspace-layout">
-          <aside className="library-sidebar" aria-label="Разделы библиотеки">
-            <div className="library-sidebar__rail" aria-hidden="true">
-              <span>‹</span>
+        <div
+          className={`workspace-layout ${
+            sidebarCollapsed ? "workspace-layout--sidebar-collapsed" : ""
+          }`}
+        >
+          <aside
+            className={`library-sidebar ${
+              sidebarCollapsed ? "library-sidebar--collapsed" : ""
+            }`}
+            aria-label="Разделы библиотеки"
+          >
+            <div className="library-sidebar__rail">
+              <button
+                className="sidebar-toggle"
+                type="button"
+                aria-controls="library-sidebar-menu"
+                aria-expanded={!sidebarCollapsed}
+                aria-label={
+                  sidebarCollapsed
+                    ? "Развернуть боковое меню"
+                    : "Свернуть боковое меню"
+                }
+                title={
+                  sidebarCollapsed
+                    ? "Развернуть боковое меню"
+                    : "Свернуть боковое меню"
+                }
+                onClick={() => setSidebarCollapsed((current) => !current)}
+              >
+                <span aria-hidden="true">{sidebarCollapsed ? "›" : "‹"}</span>
+              </button>
             </div>
-            <div className="library-sidebar__menu">
+            <div className="library-sidebar__menu" id="library-sidebar-menu">
               <button
                 className={`library-sidebar__item ${
                   libraryScope === "public" && activeSection === "favorites"
@@ -314,6 +367,7 @@ export function App({
                 type="button"
                 onClick={() => setActiveSection("favorites")}
                 disabled={libraryScope === "personal"}
+                title="Избранное"
                 aria-current={
                   libraryScope === "public" && activeSection === "favorites"
                     ? "page"
@@ -331,6 +385,7 @@ export function App({
                     : ""
                 }`}
                 type="button"
+                title="Презентации"
                 onClick={() => {
                   if (libraryScope === "personal") {
                     setPersonalKind("presentation");
@@ -355,6 +410,7 @@ export function App({
                     : ""
                 }`}
                 type="button"
+                title="Фотографии"
                 onClick={() => {
                   setLibraryScope("personal");
                   setPersonalKind("photo");
@@ -375,6 +431,7 @@ export function App({
                     : ""
                 }`}
                 type="button"
+                title="Иллюстрации"
                 onClick={() => {
                   setLibraryScope("personal");
                   setPersonalKind("illustration");
@@ -388,7 +445,12 @@ export function App({
                 <span aria-hidden="true">◇</span>
                 <strong>Иллюстрации</strong>
               </button>
-              <button className="library-sidebar__item" type="button" disabled>
+              <button
+                className="library-sidebar__item"
+                type="button"
+                title="Иконки"
+                disabled
+              >
                 <span aria-hidden="true">◎</span>
                 <strong>Иконки</strong>
               </button>
@@ -399,6 +461,7 @@ export function App({
                     : ""
                 }`}
                 type="button"
+                title="Логотипы"
                 onClick={() => {
                   setLibraryScope("personal");
                   setPersonalKind("logo");
@@ -412,17 +475,28 @@ export function App({
                 <span aria-hidden="true">A</span>
                 <strong>Логотипы</strong>
               </button>
-              <button className="library-sidebar__item" type="button" disabled>
+              <button
+                className="library-sidebar__item"
+                type="button"
+                title="Шаблоны"
+                disabled
+              >
                 <span aria-hidden="true">⊞</span>
                 <strong>Шаблоны</strong>
               </button>
-              <button className="library-sidebar__item" type="button" disabled>
+              <button
+                className="library-sidebar__item"
+                type="button"
+                title="Продукты"
+                disabled
+              >
                 <span aria-hidden="true">✦</span>
                 <strong>Продукты</strong>
               </button>
               <button
                 className="library-sidebar__item library-sidebar__item--muted"
                 type="button"
+                title="ИИ-ассистент"
                 disabled
               >
                 <span aria-hidden="true">✧</span>
