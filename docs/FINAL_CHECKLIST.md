@@ -81,6 +81,7 @@ Checked items are present in the repository or were verified by direct static/pa
 ## Quality gates
 
 - [x] `npm run check` is defined to run library validation, manifest validation, lint, all typechecks, tests, and builds.
+- [x] GitHub Actions runs `npm ci` and the complete `npm run check` gate for pushes, pull requests, and manual dispatches.
 - [x] Tools have their own TypeScript project and are included in the root typecheck.
 - [x] Automated coverage includes API filters/errors/CORS/path safety/refresh, task-pane UX, Base64 conversion, and PowerPoint service behavior.
 - [x] `npm run validate-library` passes against all 12 final demo items.

@@ -1,5 +1,7 @@
 # Корпоративная библиотека слайдов для PowerPoint
 
+[![CI](https://github.com/w3L1k/corporate_slide_library/actions/workflows/ci.yml/badge.svg)](https://github.com/w3L1k/corporate_slide_library/actions/workflows/ci.yml)
+
 ## Что это такое
 
 Slide Library — локальный MVP корпоративной библиотеки слайдов, работающий как task pane-надстройка внутри Microsoft PowerPoint.
@@ -39,6 +41,7 @@ MVP предоставляет единый локальный каталог с
 - проверка формата и ограничение личных файлов размером 20 МБ;
 - сохранение исходного форматирования слайда;
 - browser mode для разработки без PowerPoint;
+- автоматическая CI-проверка в GitHub Actions при push и pull request;
 - файловое хранилище с JSON-каталогом;
 - проверка схемы, duplicate ID, зарегистрированных файлов и безопасных путей;
 - автоматическое обновление каталога после изменения `catalog.json`;
